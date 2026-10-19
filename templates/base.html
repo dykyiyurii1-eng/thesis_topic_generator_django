@@ -1,0 +1,37 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Генератор тем{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <header class="site-header">
+        <a class="logo" href="{% url 'home' %}">Генератор тем</a>
+        <nav>
+            <a href="{% url 'home' %}">Головна</a>
+            <a href="/quiz/">Тест</a>
+            <a href="/history/">Історія</a>
+            {% if user.is_authenticated %}
+                <span class="user">{{ user.username }}</span>
+                <form method="post" action="/accounts/logout/" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="link-button">Вийти</button>
+                </form>
+            {% else %}
+                <a href="/accounts/login/">Увійти</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <small>Навчальний проєкт · Django</small>
+    </footer>
+</body>
+</html>

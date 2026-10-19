@@ -1,0 +1,104 @@
+:root {
+    --bg: #ffffff;
+    --fg: #111827;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-fg: #ffffff;
+    --border: #e5e7eb;
+    --card: #f9fafb;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0f172a;
+        --fg: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #60a5fa;
+        --accent-fg: #0f172a;
+        --border: #1f2937;
+        --card: #111827;
+    }
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+
+.site-header .logo { font-weight: 700; color: var(--fg); }
+.site-header nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.site-header .user { color: var(--muted); }
+
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem;
+}
+
+.hero h1 { margin: 0 0 0.5rem; font-size: clamp(1.5rem, 4vw, 2.25rem); }
+.hero .lead { color: var(--muted); margin: 0 0 1.5rem; }
+.hero .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+.btn {
+    display: inline-block;
+    padding: 0.6rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--fg);
+    cursor: pointer;
+    font: inherit;
+}
+.btn.primary {
+    background: var(--accent);
+    color: var(--accent-fg);
+    border-color: var(--accent);
+}
+.btn:hover { text-decoration: none; filter: brightness(1.05); }
+
+.link-button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--accent);
+    cursor: pointer;
+    font: inherit;
+}
+form.inline { display: inline; margin: 0; }
+
+.site-footer {
+    text-align: center;
+    padding: 1.5rem 1rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+}
