@@ -9,9 +9,9 @@
 </head>
 <body>
     <header class="site-header">
-        <a class="logo" href="{% url 'home' %}">Генератор тем</a>
+        <a class="logo" href="{% url 'topics:home' %}">Генератор тем</a>
         <nav>
-            <a href="{% url 'home' %}">Головна</a>
+            <a href="{% url 'topics:home' %}">Головна</a>
             <a href="/quiz/">Тест</a>
             <a href="/history/">Історія</a>
             {% if user.is_authenticated %}
