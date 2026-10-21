@@ -155,3 +155,20 @@ class SessionDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_queryset(self):
         return GenerationSession.objects.filter(student=self.request.user)
+from django.core.mail import send_mail  
+from .forms import ContactForm
+
+def contact_view(request):
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            subject = f"Повідомлення від {form.cleaned_data['name']}"
+            message = form.cleaned_data['message']
+            sender = form.cleaned_data['email']
+            recipient_list = ['твоя_пошта@gmail.com'] # Куди надсилати
+
+            send_mail(subject, message, sender, recipient_list)
+            return render(request, 'topics/contact_success.html')
+    else:
+        form = ContactForm()
+    return render(request, 'topics/contact.html', {'form': form})

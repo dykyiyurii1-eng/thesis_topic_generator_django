@@ -1,16 +1,90 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Головна · Генератор тем{% endblock %}
+{% block title %}Головна · THESIS_GEN{% endblock %}
+
+{% block extra_css %}
+     <link rel="stylesheet" href="{% static 'css/brytal_style.css' %}">
+{% endblock %}
 
 {% block content %}
-<section class="hero">
-    <h1>Генератор тем кваліфікаційних робіт</h1>
-    <p class="lead">
-        Опиши свої інтереси — отримай 5 тем, які пройшли дебати Генератора й Критика.
-    </p>
-    <div class="actions">
-    <a class="btn primary" href="{% url 'topics:generate' %}">Почати генерацію</a>
-        <a class="btn" href="{% url 'topics:quiz' %}">Пройти тест інтересів</a>
+<div class="row g-4">
+    
+    <div class="col-lg-8">
+        <div class="card-brutal d-flex flex-column justify-content-between" style="min-height: 400px;">
+            <div>
+                <span class="tech-index">SYS.00 // MAIN</span>
+                <h1 class="display-1 mt-3 mb-4">ГЕНЕРАТОР ТЕМ</h1>
+                <p class="fs-5 mb-4" style="max-width: 600px;">
+                    Цифрова система для академічних досліджень. Запусти дебати між двома нейромережами: Генератором і Критиком. Отримай 5 ідеальних тем, проаналізованих штучним інтелектом.
+                </p>
+            </div>
+            <div class="d-flex gap-3 flex-wrap">
+                <a href="{% url 'topics:generate' %}" class="btn-brutal btn-brutal-black">Почати генерацію →</a>
+                <a href="{% url 'topics:quiz' %}" class="btn-brutal">Тест інтересів</a>
+            </div>
+        </div>
     </div>
-</section>
+
+    <div class="col-lg-4">
+        <div class="card-brutal">
+            <span class="tech-index">SYS.01 // STATUS</span>
+            <h3 class="mt-3 mb-4 fs-5">СИСТЕМНІ МЕТРИКИ</h3>
+            
+            <div class="d-flex justify-content-between mb-2">
+                <span><span class="status-dot"></span>GENERATOR_AI</span>
+                <span class="fw-bold">ONLINE</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span><span class="status-dot"></span>CRITIC_AI</span>
+                <span class="fw-bold">ONLINE</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span><span class="status-dot"></span>DATABASE</span>
+                <span class="fw-bold">MySQL.8</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span><span class="status-dot"></span>FRAMEWORK</span>
+                <span class="fw-bold">DJANGO.6</span>
+            </div>
+            <div class="separator"></div>
+            <div class="small text-muted">
+                > SYSTEM READY<br>
+                > AWAITING INPUT<br>
+                > LATENCY: 14ms
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card-brutal">
+            <span class="tech-index">MOD.01</span>
+            <div class="fs-1 fw-bold mb-2" style="font-family: 'Syne';">01.</div>
+            <h3 class="fs-5">ТЕСТ ІНТЕРЕСІВ</h3>
+            <div class="separator"></div>
+            <p class="small text-muted mb-0">Пройди коротке опитування, щоб система визначила твої ключові академічні зацікавлення.</p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card-brutal">
+            <span class="tech-index">MOD.02</span>
+            <div class="fs-1 fw-bold mb-2" style="font-family: 'Syne';">02.</div>
+            <h3 class="fs-5">ДЕБАТИ ШІ</h3>
+            <div class="separator"></div>
+            <p class="small text-muted mb-0">Генератор пропонує ідеї, Критик знаходить недоліки. Обери найкращу тему в результаті дебатів.</p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card-brutal">
+            <span class="tech-index">MOD.03</span>
+            <div class="fs-1 fw-bold mb-2" style="font-family: 'Syne';">03.</div>
+            <h3 class="fs-5">ФІНАЛЬНИЙ ВИБІР</h3>
+            <div class="separator"></div>
+            <p class="small text-muted mb-0">Закріпи тему, яка тобі сподобалась, та збережи її в особистій історії генерацій.</p>
+        </div>
+    </div>
+
+</div>
 {% endblock %}
