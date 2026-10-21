@@ -152,17 +152,11 @@ def call_openrouter(system, user, temperature=0.7):
 
 def call_with_fallback(role, system, user):
     if role == 'generator':
-        providers = [
-            (call_gemini, 'Gemini'),
-            (call_openrouter, 'OpenRouter'),
-            (call_groq, 'Groq')
-        ]
-    else:
-        providers = [
-            (call_groq, 'Groq'),
-            (call_gemini, 'Gemini'),
-            (call_openrouter, 'OpenRouter')
-        ]
+        providers = [(call_gemini, 'Gemini'), (call_openrouter, 'OpenRouter'), (call_groq, 'Groq')]
+    elif role == 'critic':
+        providers = [(call_groq, 'Groq'), (call_gemini, 'Gemini'), (call_openrouter, 'OpenRouter')]
+    else:  # judge
+        providers = [(call_openrouter, 'OpenRouter'), (call_groq, 'Groq'), (call_gemini, 'Gemini')]
 
     last_error = None
     for func, name in providers:
@@ -179,5 +173,5 @@ def call_with_fallback(role, system, user):
                 except LLMError:
                     pass
             continue
-    
+
     raise LLMError(f"Усі ШІ-провайдери недоступні. Остання помилка: {last_error}")

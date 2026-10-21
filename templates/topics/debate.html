@@ -6,7 +6,7 @@
 <div class="container mt-4">
     <h2 class="mb-3">Дебати щодо генерації тем</h2>
     <p class="text-muted">Спеціальність: {{ session.specialty }} | Кіл: {{ session.rounds }}</p>
-    
+
     <div id="chat-container" class="border rounded p-3 mb-3 bg-light" style="height: 500px; overflow-y: auto;">
         <div class="text-center text-muted mt-5" id="empty-state">
             Натисніть кнопку нижче, щоб почати генерацію
@@ -22,57 +22,104 @@
 <script>
     const totalRounds = parseInt("{{ session.rounds }}") || 1;
     const sessionId = "{{ session.id }}";
-    const csrfToken = "{{ csrf_token }}";
 
-    function appendMessage(sender, text, bgClass) {
+    function appendMessage(sender, text, bgClass, icon = "") {
         const chat = document.getElementById('chat-container');
         const empty = document.getElementById('empty-state');
         if (empty) empty.style.display = 'none';
 
         const msg = document.createElement('div');
         msg.className = `mb-3 p-3 rounded shadow-sm ${bgClass}`;
-        msg.innerHTML = `<strong>${sender}:</strong><br>${text}`;
+
+        const header = document.createElement('strong');
+        header.textContent = `${icon} ${sender}:`;
+
+        const content = document.createElement('div');
+        content.style.whiteSpace = "pre-wrap";
+        content.textContent = text;
+
+        msg.appendChild(header);
+        msg.appendChild(content);
         chat.appendChild(msg);
         chat.scrollTop = chat.scrollHeight;
     }
 
     function startDebate(roundNo) {
-        document.getElementById('start-btn').disabled = true;
+        const btn = document.getElementById('start-btn');
+        btn.disabled = true;
         document.getElementById('status-text').innerText = 'З\'єднання...';
 
         const eventSource = new EventSource(`/session/${sessionId}/stream/?round=${roundNo}`);
 
         eventSource.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            
-            if (data.type === 'status') {
-                document.getElementById('status-text').innerText = data.text;
-            } else if (data.type === 'message') {
-                appendMessage('Система', data.text, 'bg-secondary text-white');
-            } else if (data.type === 'error') {
-                appendMessage('Помилка', data.text, 'bg-danger text-white');
-                eventSource.close();
-                document.getElementById('start-btn').disabled = false;
-            } else if (data.type === 'round_done') {
-                document.getElementById('status-text').innerText = 'Коло завершено!';
-                eventSource.close();
-                
-                if (roundNo < totalRounds) {
-                    const btn = document.getElementById('start-btn');
+            // Логування в консоль браузера (F12 → Console)
+            try {
+                const parsed = JSON.parse(event.data);
+                console.log(`%c[SSE] ${parsed.type}`, 'color: #0a0; font-weight: bold;', parsed);
+            } catch (e) {
+                console.warn('[SSE] raw (не JSON):', event.data);
+            }
+
+            try {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'status') {
+                    document.getElementById('status-text').innerText = data.text;
+
+                } else if (data.type === 'generator_topics') {
+                    let text = `Я (${data.provider}) пропоную такі теми:\n`;
+                    data.topics.forEach((t, i) => {
+                        text += `${i + 1}. ${t.title}\n   ${t.why || ''}\n`;
+                    });
+                    appendMessage('Генератор', text, 'bg-primary text-white', '🤖');
+
+                } else if (data.type === 'critic_scores') {
+                    let text = `Мій аналіз (${data.provider}):\n`;
+                    data.scores.forEach(s => {
+                        const verdictLabel = {
+                            'keep': '✅ Залишити',
+                            'revise': '🔧 Доопрацювати',
+                            'drop': '❌ Відкинути'
+                        }[s.verdict] || s.verdict || '—';
+
+                        text += `\nТема ${s.id}: ${verdictLabel}`;
+                        if (s.score !== undefined) text += ` (${s.score}/10)`;
+                        if (s.problems) text += `\n   Проблеми: ${s.problems}`;
+                    });
+                    appendMessage('Критик', text, 'bg-warning text-dark', '🧐');
+
+                } else if (data.type === 'error') {
+                    appendMessage('Помилка', data.text, 'bg-danger text-white', '❌');
+                    eventSource.close();
                     btn.disabled = false;
-                    btn.innerText = `Почати коло ${roundNo + 1}`;
-                    btn.onclick = function() { startDebate(roundNo + 1); };
-                } else {
-                    document.getElementById('status-text').innerText = 'Усі кола завершено!';
-                    setTimeout(function() { window.location.reload(); }, 1500);
+
+                } else if (data.type === 'round_done') {
+                    document.getElementById('status-text').innerText = `Коло ${roundNo} завершено!`;
+                    eventSource.close();
+
+                    if (roundNo < totalRounds) {
+                        btn.disabled = false;
+                        btn.innerText = `Почати коло ${roundNo + 1}`;
+                        btn.onclick = function() { startDebate(roundNo + 1); };
+                    } else {
+                        document.getElementById('status-text').innerText = 'Усі кола завершено!';
+                        btn.disabled = false;
+                        btn.innerText = 'Переглянути історію';
+                        btn.className = 'btn btn-primary btn-lg';
+                        btn.onclick = function() {
+                            window.location.href = `/session/${sessionId}/history/`;
+                        };
+                    }
                 }
+            } catch (e) {
+                console.error("Помилка обробки SSE:", e);
             }
         };
 
         eventSource.onerror = function() {
             document.getElementById('status-text').innerText = 'Помилка з\'єднання.';
             eventSource.close();
-            document.getElementById('start-btn').disabled = false;
+            btn.disabled = false;
         };
     }
 </script>

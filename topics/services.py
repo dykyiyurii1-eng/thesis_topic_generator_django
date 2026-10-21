@@ -104,6 +104,9 @@ def run_debate_pipeline(session, round_no):
             if topic:
                 topic.score = c.get('score') or 5
                 topic.critic_comment = c.get('problems', '')
+                # Якщо у моделі є поле verdict — збережіть його:
+                if hasattr(topic, 'verdict'):
+                    topic.verdict = c.get('verdict', '')
                 topic.save()
 
         AgentMessage.objects.update_or_create(

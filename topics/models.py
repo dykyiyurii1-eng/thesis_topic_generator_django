@@ -96,7 +96,8 @@ class GenerationSession(models.Model):
         constraints = [
     models.CheckConstraint(condition=models.Q(rounds__gte=1) & models.Q(rounds__lte=3), name='rounds_between_1_and_3')
 ]
-
+    def get_absolute_url(self):
+            return reverse('topics:history_detail', kwargs={'pk': self.pk})
     def __str__(self):
         return f"Сесія {self.id} - {self.specialty}"
 
@@ -127,7 +128,8 @@ class GeneratedTopic(models.Model):
         return self.title
 
 class AgentMessage(models.Model):
-    AGENT_CHOICES = (('generator', 'Генератор'), ('critic', 'Критик'), ('user', 'Користувач'))
+    AGENT_CHOICES = (('generator', 'Генератор'), ('critic', 'Критик'),
+                 ('judge', 'Суддя'), ('user', 'Користувач'))
     session = models.ForeignKey(GenerationSession, on_delete=models.CASCADE, related_name='messages', verbose_name="Сесія")
     agent = models.CharField(max_length=20, choices=AGENT_CHOICES, verbose_name="Агент")
     provider = models.CharField(max_length=50, blank=True, verbose_name="Провайдер")
@@ -145,3 +147,4 @@ class AgentMessage(models.Model):
 
     def __str__(self):
         return f"{self.get_agent_display()} - {self.session.id}"
+    
