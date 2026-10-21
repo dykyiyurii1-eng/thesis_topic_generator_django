@@ -5,4 +5,5 @@ app_name = 'topics'
 
 urlpatterns = [
     path('', views.home_view, name='home'),
+    path('quiz/', views.quiz_view, name='quiz'),
 ]
