@@ -1,12 +1,12 @@
 import json
-from .models import GeneratedTopic, AgentMessage
-from .llm import call_with_fallback, parse_json_response, LLMError
-from .prompts import GENERATOR_SYSTEM, CRITIC_SYSTEM, build_generator_input, build_critic_input
 from collections import defaultdict
-from .models import StudentInterest, Interest, OptionInterest, GeneratedTopic, AgentMessage
+
+from django.db import transaction
+
 from .llm import call_with_fallback, parse_json_response, LLMError
+from .models import StudentInterest, Interest, OptionInterest, GeneratedTopic, AgentMessage
 from .prompts import GENERATOR_SYSTEM, CRITIC_SYSTEM, build_generator_input, build_critic_input
-import json
+
 
 def process_quiz_results(user, selected_option_ids):
     if not selected_option_ids:
@@ -33,10 +33,10 @@ def process_quiz_results(user, selected_option_ids):
 
     return result_interests
 
-# ... далі йде твій код run_debate_pipeline ...
+
 def run_debate_pipeline(session, round_no):
     yield f"data: {json.dumps({'type': 'status', 'text': f'Генератор пише... (Коло {round_no} з {session.rounds})'})}\n\n"
-    
+
     ctx = {
         'specialty': session.specialty,
         'education': session.institution_type,
@@ -46,7 +46,8 @@ def run_debate_pipeline(session, round_no):
         'pinned_ids': list(session.topics.filter(is_pinned=True).values_list('topic_key', flat=True)),
         'user_hint': ''
     }
-    
+
+    # --- Генератор ---
     try:
         raw_gen, provider_gen = call_with_fallback('generator', GENERATOR_SYSTEM, build_generator_input(ctx))
         topics_data = parse_json_response(raw_gen)
@@ -55,26 +56,37 @@ def run_debate_pipeline(session, round_no):
         return
 
     saved_topics = []
-    for i, t in enumerate(topics_data):
-        topic_key = f"r{round_no}_{i+1}"
-        topic = GeneratedTopic.objects.create(
-            session=session,
-            topic_key=topic_key,
-            title=t.get('title', 'Без назви'),
-            why=t.get('why', ''),
-            difficulty=t.get('difficulty', 'medium'),
-            round=round_no
-        )
-        saved_topics.append(topic)
+    with transaction.atomic():
+        for i, t in enumerate(topics_data):
+            topic_key = f"r{round_no}_{i+1}"
+            topic, created = GeneratedTopic.objects.update_or_create(
+                session=session,
+                topic_key=topic_key,
+                defaults={
+                    'title': t.get('title', 'Без назви'),
+                    'why': t.get('why', ''),
+                    'difficulty': t.get('difficulty', 'medium'),
+                    'round': round_no,
+                }
+            )
+            saved_topics.append(topic)
 
-    AgentMessage.objects.create(
-        session=session, agent='generator', provider=provider_gen,
-        content=f"Згенеровано {len(saved_topics)} тем.", sequence_number=round_no * 2 - 1
-    )
-    
-    yield f"data: {json.dumps({'type': 'message', 'text': f'Генератор ({provider_gen}) запропонував теми.'})}\n\n"
+        AgentMessage.objects.update_or_create(
+            session=session,
+            sequence_number=round_no * 2 - 1,
+            defaults={
+                "agent": "generator",
+                "provider": provider_gen,
+                "content": raw_gen,
+            },
+        )
+
+    topics_payload = [{'id': t.topic_key, 'title': t.title, 'why': t.why} for t in saved_topics]
+    yield f"data: {json.dumps({'type': 'generator_topics', 'provider': provider_gen, 'topics': topics_payload}, ensure_ascii=False)}\n\n"
+
     yield f"data: {json.dumps({'type': 'status', 'text': 'Критик оцінює...'})}\n\n"
 
+    # --- Критик ---
     topics_for_critic = [{'id': t.topic_key, 'title': t.title, 'why': t.why} for t in saved_topics]
     try:
         raw_cri, provider_cri = call_with_fallback('critic', CRITIC_SYSTEM, build_critic_input(ctx, topics_for_critic))
@@ -83,18 +95,25 @@ def run_debate_pipeline(session, round_no):
         yield f"data: {json.dumps({'type': 'error', 'text': f'Критик недоступний: {e}'})}\n\n"
         return
 
-    for c in critic_data:
-        t_id = c.get('id')
-        topic = next((t for t in saved_topics if t.topic_key == t_id), None)
-        if topic:
-            topic.score = c.get('score', 0)
-            topic.critic_comment = c.get('problems', '')
-            topic.save()
+    yield f"data: {json.dumps({'type': 'critic_scores', 'provider': provider_cri, 'scores': critic_data}, ensure_ascii=False)}\n\n"
 
-    AgentMessage.objects.create(
-        session=session, agent='critic', provider=provider_cri,
-        content=json.dumps(critic_data, ensure_ascii=False), sequence_number=round_no * 2
-    )
-    
-    yield f"data: {json.dumps({'type': 'message', 'text': f'Критик ({provider_cri}) завершив оцінку.'})}\n\n"
-    yield f"data: {json.dumps({'type': 'round_done', 'round': round_no, 'topics': topics_for_critic})}\n\n"
+    with transaction.atomic():
+        for c in critic_data:
+            t_id = c.get('id')
+            topic = next((t for t in saved_topics if t.topic_key == t_id), None)
+            if topic:
+                topic.score = c.get('score') or 5
+                topic.critic_comment = c.get('problems', '')
+                topic.save()
+
+        AgentMessage.objects.update_or_create(
+            session=session,
+            sequence_number=round_no * 2,
+            defaults={
+                "agent": "critic",
+                "provider": provider_cri,
+                "content": raw_cri,
+            },
+        )
+
+    yield f"data: {json.dumps({'type': 'round_done', 'round': round_no})}\n\n"
