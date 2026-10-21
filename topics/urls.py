@@ -6,8 +6,13 @@ app_name = 'topics'
 urlpatterns = [
     path('', views.home_view, name='home'),
     path('quiz/', views.quiz_view, name='quiz'),
-    path('generate/', views.session_create_view, name='generate'),
+    path('generate/', views.SessionCreateView.as_view(), name='generate'),
     path('interests/suggest/', views.suggest_interests_view, name='suggest_interests'),
-    path('session/<int:session_id>/', views.debate_page_view, name='debate_page'),
+    path('session/<int:session_id>/', views.DebatePageView.as_view(), name='debate_page'),
     path('session/<int:session_id>/stream/', views.debate_stream_view, name='debate_stream'),
+    path('topic/<int:topic_id>/pin/', views.pin_topic_view, name='pin_topic'),
+    path('history/', views.SessionListView.as_view(), name='history'),
+    path('history/<int:pk>/', views.SessionDetailView.as_view(), name='history_detail'),
+    path('history/<int:pk>/edit/', views.SessionUpdateView.as_view(), name='session_edit'),
+    path('history/<int:pk>/delete/', views.SessionDeleteView.as_view(), name='session_delete'),
 ]

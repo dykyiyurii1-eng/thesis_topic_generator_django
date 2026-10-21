@@ -20,6 +20,10 @@
 </div>
 
 <script>
+    const totalRounds = parseInt("{{ session.rounds }}") || 1;
+    const sessionId = "{{ session.id }}";
+    const csrfToken = "{{ csrf_token }}";
+
     function appendMessage(sender, text, bgClass) {
         const chat = document.getElementById('chat-container');
         const empty = document.getElementById('empty-state');
@@ -36,7 +40,7 @@
         document.getElementById('start-btn').disabled = true;
         document.getElementById('status-text').innerText = 'З\'єднання...';
 
-        const eventSource = new EventSource(`/session/{{ session.id }}/stream/?round=${roundNo}`);
+        const eventSource = new EventSource(`/session/${sessionId}/stream/?round=${roundNo}`);
 
         eventSource.onmessage = function(event) {
             const data = JSON.parse(event.data);
@@ -53,13 +57,14 @@
                 document.getElementById('status-text').innerText = 'Коло завершено!';
                 eventSource.close();
                 
-                if (roundNo < {{ session.rounds }}) {
+                if (roundNo < totalRounds) {
                     const btn = document.getElementById('start-btn');
                     btn.disabled = false;
                     btn.innerText = `Почати коло ${roundNo + 1}`;
-                    btn.onclick = () => startDebate(roundNo + 1);
+                    btn.onclick = function() { startDebate(roundNo + 1); };
                 } else {
                     document.getElementById('status-text').innerText = 'Усі кола завершено!';
+                    setTimeout(function() { window.location.reload(); }, 1500);
                 }
             }
         };

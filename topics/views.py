@@ -1,73 +1,157 @@
-from django.shortcuts import render, redirect,get_object_or_404
-from django.urls import reverse
-from .models import Interest, Question
-from .services import process_quiz_results
-from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count, Q
+from django.http import JsonResponse, StreamingHttpResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse, reverse_lazy
+from django.views.decorators.http import require_POST
+from django.views.generic import (ListView, DetailView, CreateView,
+                                  UpdateView, DeleteView)
+
 from .forms import GenerationSessionForm
+from .models import Interest, Question, GenerationSession, GeneratedTopic
+from .services import process_quiz_results, run_debate_pipeline
 
-from django.http import JsonResponse
 
-from django.http import StreamingHttpResponse
-from .models import GenerationSession
-from .services import run_debate_pipeline
+def sessions_for_request(request):
+    if request.user.is_authenticated:
+        return GenerationSession.objects.filter(student=request.user)
+    key = request.session.session_key
+    if not key:
+        return GenerationSession.objects.none()
+    return GenerationSession.objects.filter(student__isnull=True, guest_key=key)
+
+
 def home_view(request):
     interests = Interest.objects.all()[:6]
     return render(request, 'topics/home.html', {'interests': interests})
+
 
 def quiz_view(request):
     if request.method == 'POST':
         selected_options = request.POST.getlist('options')
         results = process_quiz_results(request.user, selected_options)
-        
-        if request.user.is_authenticated:
-            return redirect('topics:home') 
-        else:
+        if not request.user.is_authenticated:
             request.session['guest_interests'] = [i.id for i in results]
-            return redirect('topics:home') 
-            
+        return redirect('topics:home')
+
     questions = Question.objects.prefetch_related('options').all()
     return render(request, 'topics/quiz.html', {'questions': questions})
 
 
-def session_create_view(request):
+def suggest_interests_view(request):
+    query = request.GET.get('q', '').strip()
+    if query:
+        interests = Interest.objects.filter(name__icontains=query)[:10]
+    else:
+        interests = Interest.objects.all()[:10]
+    results = [{'id': i.id, 'text': f"{i.name} ({i.category})"} for i in interests]
+    return JsonResponse({'results': results})
+
+
+def debate_stream_view(request, session_id):
+    session = get_object_or_404(sessions_for_request(request), id=session_id)
+    round_no = int(request.GET.get('round', 1))
+    response = StreamingHttpResponse(run_debate_pipeline(session, round_no),
+                                     content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    return response
+
+
+@login_required
+@require_POST
+def pin_topic_view(request, topic_id):
+    topic = get_object_or_404(GeneratedTopic, id=topic_id, session__student=request.user)
+    topic.is_pinned = not topic.is_pinned
+    topic.save(update_fields=['is_pinned'])
+    return JsonResponse({'pinned': topic.is_pinned})
+
+
+def trial_generate_view(request):
     if request.method == 'POST':
         form = GenerationSessionForm(request.POST)
         if form.is_valid():
             session = form.save(commit=False)
-            if request.user.is_authenticated:
-                session.student = request.user
-            else:
-                if not request.session.session_key:
-                    request.session.create()
-                session.guest_key = request.session.session_key
+            if not request.session.session_key:
+                request.session.create()
+            session.guest_key = request.session.session_key
             session.status = 'running'
             session.save()
             form.save_m2m()
             return redirect('topics:debate_page', session_id=session.id)
     else:
         form = GenerationSessionForm()
-    
     return render(request, 'topics/generate.html', {'form': form})
 
-def suggest_interests_view(request):
-    query = request.GET.get('q', '')
-    if query:
-        interests = Interest.objects.filter(name__icontains=query)[:10]
-    else:
-        interests = Interest.objects.all()[:10]
-        
-    results = [{'id': i.id, 'text': f"{i.name} ({i.category})"} for i in interests]
-    return JsonResponse({'results': results})
+
+class SessionCreateView(LoginRequiredMixin, CreateView):
+    model = GenerationSession
+    form_class = GenerationSessionForm
+    template_name = 'topics/generate.html'
+
+    def form_valid(self, form):
+        form.instance.student = self.request.user
+        form.instance.status = 'running'
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('topics:debate_page', kwargs={'session_id': self.object.id})
 
 
-def debate_page_view(request, session_id):
-    session = get_object_or_404(GenerationSession, id=session_id)
-    return render(request, 'topics/debate.html', {'session': session})
+class DebatePageView(DetailView):
+    template_name = 'topics/debate.html'
+    context_object_name = 'session'
+    pk_url_kwarg = 'session_id'
 
-def debate_stream_view(request, session_id):
-    session = get_object_or_404(GenerationSession, id=session_id)
-    round_no = int(request.GET.get('round', 1))
-    
-    response = StreamingHttpResponse(run_debate_pipeline(session, round_no), content_type='text/event-stream')
-    response['Cache-Control'] = 'no-cache'
-    return response
+    def get_queryset(self):
+        return sessions_for_request(self.request)
+
+
+class SessionListView(LoginRequiredMixin, ListView):
+    model = GenerationSession
+    template_name = 'topics/history_list.html'
+    context_object_name = 'sessions'
+    paginate_by = 10
+
+    def get_queryset(self):
+        qs = (GenerationSession.objects
+              .filter(student=self.request.user)
+              .annotate(topics_count=Count('topics', distinct=True)))
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            qs = qs.filter(Q(specialty__icontains=q) |
+                           Q(interests__name__icontains=q)).distinct()
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['q'] = self.request.GET.get('q', '').strip()
+        return context
+
+
+class SessionDetailView(LoginRequiredMixin, DetailView):
+    model = GenerationSession
+    template_name = 'topics/history_detail.html'
+    context_object_name = 'session'
+
+    def get_queryset(self):
+        return (GenerationSession.objects
+                .filter(student=self.request.user)
+                .prefetch_related('topics', 'interests'))
+
+
+class SessionUpdateView(LoginRequiredMixin, UpdateView):
+    form_class = GenerationSessionForm
+    template_name = 'topics/generate.html'
+
+    def get_queryset(self):
+        return GenerationSession.objects.filter(student=self.request.user)
+
+
+class SessionDeleteView(LoginRequiredMixin, DeleteView):
+    template_name = 'topics/session_confirm_delete.html'
+    context_object_name = 'session'
+    success_url = reverse_lazy('topics:history')
+
+    def get_queryset(self):
+        return GenerationSession.objects.filter(student=self.request.user)

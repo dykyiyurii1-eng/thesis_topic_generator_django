@@ -14,8 +14,9 @@
         <nav>
             <a href="{% url 'topics:home' %}">Головна</a>
             <a href="{% url 'topics:quiz' %}">Тест</a>
-            <a href="/history/">Історія</a>
+            
             {% if user.is_authenticated %}
+            <a href="/history/">Історія</a>
                 <span class="user">{{ user.username }}</span>
                 <form method="post" action="/accounts/logout/" class="inline">
                     {% csrf_token %}

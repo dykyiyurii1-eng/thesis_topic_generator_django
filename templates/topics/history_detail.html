@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block content %}
+<a href="{% url 'topics:history' %}">← До історії</a>
+<h1 class="h3 mt-2">{{ session.specialty }}</h1>
+<p class="text-muted">
+  {{ session.get_institution_type_display }} · {{ session.get_work_type_display }} ·
+  {{ session.created_at|date:"d.m.Y H:i" }} · {{ session.get_status_display }}
+</p>
+
+<p>
+  Інтереси:
+  {% for i in session.interests.all %}
+    <span class="badge bg-secondary">{{ i.name }}</span>
+  {% empty %}не вказано{% endfor %}
+</p>
+
+<h2 class="h5">Теми</h2>
+{% for t in session.topics.all %}
+  <div class="card mb-2">
+    <div class="card-body">
+      <div class="fw-bold">
+        {{ t.title }}
+        {% if t.is_pinned %}📌{% endif %}
+      </div>
+      <div class="small text-muted">
+        Коло {{ t.round }} · {{ t.get_difficulty_display }}
+        {% if t.score %}· оцінка {{ t.score }}{% endif %}
+      </div>
+      <p class="mb-1">{{ t.why }}</p>
+      {% if t.critic_comment %}<p class="small mb-0"><b>Критик:</b> {{ t.critic_comment }}</p>{% endif %}
+    </div>
+  </div>
+{% empty %}
+  <p class="text-muted">Тем немає.</p>
+{% endfor %}
+{% endblock %}
