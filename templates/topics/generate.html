@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Створення генерації{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<style>
+    .autocomplete-items {
+        position: absolute;
+        border: 1px solid #d4d4d4;
+        border-bottom: none;
+        border-top: none;
+        z-index: 99;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        max-height: 200px;
+        overflow-y: auto;
+        border-radius: 0 0 5px 5px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .autocomplete-item {
+        padding: 10px;
+        cursor: pointer;
+        background-color: #fff;
+        border-bottom: 1px solid #d4d4d4;
+    }
+    .autocomplete-item:hover { background-color: #e9ecef; }
+    .autocomplete { position: relative; display: inline-block; width: 100%; }
+    .help-icon { color: #6c757d; cursor: help; margin-left: 5px; font-size: 1.1rem; }
+</style>
+
+<div class="container mt-5">
+    <h1 class="mb-4">Створення нової генерації тем</h1>
+    
+    <form method="post" class="card p-4 shadow-sm">
+        {% csrf_token %}
+        
+        <div class="mb-3 autocomplete">
+            <label class="form-label">
+                Спеціальність 
+                <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Введіть назву вашої спеціальності. Можна обрати з підказок або ввести свій варіант."></i>
+            </label>
+            <input type="text" id="specialty_input" name="specialty" class="form-control" placeholder="Почніть вводити назву (наприклад: Інформатика)" autocomplete="off">
+            <div id="autocomplete-list" class="autocomplete-items" style="display: none;"></div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">
+                    Тип закладу
+                    <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Оберіть, де ви навчаєтесь. Для школи та коледжу рівень (бакалавр/магістр) не потрібен."></i>
+                </label>
+                {{ form.institution_type }}
+            </div>
+            <div class="col-md-6 mb-3" id="level-field-container">
+                <label class="form-label">
+                    Рівень освіти
+                    <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Актуально лише для університету. Оберіть бакалавра або магістра."></i>
+                </label>
+                {{ form.level }}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">
+                    Тип роботи
+                    <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Практична — створення продукту/додатку. Теоретична — дослідження. Змішана — і те, і інше."></i>
+                </label>
+                {{ form.work_type }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">
+                    Кількість кіл дебатів
+                    <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Скільки разів Генератор і Критик будуть сперечатися. 1 коло — швидко, 3 кола — найкращий результат."></i>
+                </label>
+                {{ form.rounds }}
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <label class="form-label d-block mb-2">
+                Інтереси
+                <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Оберіть теми, які вам цікаві. Генератор врахує їх при створенні тем."></i>
+            </label>
+            <div class="border p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                {{ form.interests }}
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-lg w-100">Створити сесію та почати дебати</button>
+    </form>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Ініціалізація Bootstrap Tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+
+        const institutionSelect = document.querySelector("#id_institution_type");
+        const levelContainer = document.querySelector("#level-field-container");
+        const specialtyInput = document.querySelector("#specialty_input");
+        const autocompleteList = document.querySelector("#autocomplete-list");
+
+        function toggleLevelField() {
+            if (institutionSelect.value === 'school' || institutionSelect.value === 'college') {
+                levelContainer.style.display = 'none';
+            } else {
+                levelContainer.style.display = 'block';
+            }
+        }
+        institutionSelect.addEventListener("change", toggleLevelField);
+        toggleLevelField();
+
+        specialtyInput.addEventListener("input", function() {
+            let query = this.value;
+            if (query.length < 2) {
+                autocompleteList.style.display = "none";
+                return;
+            }
+
+            fetch(`/interests/suggest/?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    autocompleteList.innerHTML = "";
+                    if (data.results.length > 0) {
+                        autocompleteList.style.display = "block";
+                        data.results.forEach(item => {
+                            let div = document.createElement("div");
+                            div.className = "autocomplete-item";
+                            div.innerText = item.text;
+                            div.addEventListener("click", function() {
+                                specialtyInput.value = item.text;
+                                autocompleteList.style.display = "none";
+                            });
+                            autocompleteList.appendChild(div);
+                        });
+                    } else {
+                        autocompleteList.style.display = "none";
+                    }
+                });
+        });
+
+        document.addEventListener("click", function(e) {
+            if (e.target !== specialtyInput && e.target !== autocompleteList) {
+                autocompleteList.style.display = "none";
+            }
+        });
+    });
+</script>
+{% endblock %}
