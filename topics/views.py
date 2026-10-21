@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect,get_object_or_404
 from django.urls import reverse
 from .models import Interest, Question
 from .services import process_quiz_results
@@ -6,8 +6,10 @@ from django.shortcuts import render, redirect
 from .forms import GenerationSessionForm
 
 from django.http import JsonResponse
-from .models import Interest
 
+from django.http import StreamingHttpResponse
+from .models import GenerationSession
+from .services import run_debate_pipeline
 def home_view(request):
     interests = Interest.objects.all()[:6]
     return render(request, 'topics/home.html', {'interests': interests})
@@ -41,7 +43,7 @@ def session_create_view(request):
             session.status = 'running'
             session.save()
             form.save_m2m()
-            return redirect('topics:home')
+            return redirect('topics:debate_page', session_id=session.id)
     else:
         form = GenerationSessionForm()
     
@@ -56,3 +58,16 @@ def suggest_interests_view(request):
         
     results = [{'id': i.id, 'text': f"{i.name} ({i.category})"} for i in interests]
     return JsonResponse({'results': results})
+
+
+def debate_page_view(request, session_id):
+    session = get_object_or_404(GenerationSession, id=session_id)
+    return render(request, 'topics/debate.html', {'session': session})
+
+def debate_stream_view(request, session_id):
+    session = get_object_or_404(GenerationSession, id=session_id)
+    round_no = int(request.GET.get('round', 1))
+    
+    response = StreamingHttpResponse(run_debate_pipeline(session, round_no), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    return response
