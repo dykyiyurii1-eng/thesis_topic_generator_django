@@ -129,7 +129,8 @@ class SessionCreateView(LoginRequiredMixin, CreateView):
     template_name = 'topics/generate.html'
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated:
+  
+        if request.user.is_authenticated and not request.user.is_staff:
             since = timezone.now() - timedelta(days=1)
             used = GenerationSession.objects.filter(
                 student=request.user, created_at__gte=since).count()

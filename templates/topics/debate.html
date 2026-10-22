@@ -4,191 +4,73 @@
 {% block title %}Дебати · Сесія {{ session.id }}{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-lg-4 mb-4">
-        <div class="card-brutal">
-            <span class="tech-index">SYS.DEBATE // INFO</span>
-            <h2 class="mt-3 mb-4">ДЕБАТИ ШІ</h2>
-
-            <div class="mb-3">
-                <span class="text-muted small d-block">СПЕЦІАЛЬНІСТЬ:</span>
-                <span class="fw-bold fs-5">{{ session.specialty }}</span>
-            </div>
-
-            <div class="mb-3">
-                <span class="text-muted small d-block">КІЛЬКІСТЬ КІЛ:</span>
-                <span class="fw-bold fs-5">{{ session.rounds }}</span>
-            </div>
-
-            <div class="separator"></div>
-
-            <div class="mb-3">
-                <span class="text-muted small d-block">СТАТУС СИСТЕМИ:</span>
-                <div id="status-text" class="fw-bold mt-1">
-                    {% if finished %}ВСІ КОЛА ЗАВЕРШЕНО{% else %}ОЧІКУВАННЯ ЗАПУСКУ{% endif %}
-                </div>
-            </div>
-
-            <button id="start-btn" class="btn-brutal btn-brutal-black w-100 mt-2"
-                    data-next-round="{{ next_round }}"
+<div class="container-fluid py-3">
+    <div class="row mb-3 align-items-center">
+        <div class="col-md-8">
+            <h2 class="mb-0">ДЕБАТИ: {{ session.specialty }}</h2>
+            <div class="small text-muted font-monospace">КІЛ: {{ session.rounds }}</div>
+        </div>
+        <div class="col-md-4 text-end">
+            <button id="start-btn" class="btn-brutal btn-brutal-black"
+                    data-current-round="{{ next_round }}"
                     data-stream-url="{% url 'topics:debate_stream' session.id %}"
-                    data-total-rounds="{{ session.rounds }}"
-                    {% if finished %}disabled{% endif %}>
-                {% if finished %}ДЕБАТИ ЗАВЕРШЕНО{% else %}ПОЧАТИ КОЛО {{ next_round }}{% endif %}
+                    data-total-rounds="{{ session.rounds }}">
+                {% if finished %}ПОВТОРИТИ КОЛО {{ session.rounds }}{% else %}ПОЧАТИ КОЛО {{ next_round }}{% endif %}
             </button>
-
-            <div class="separator"></div>
-
-            <div class="d-grid gap-2">
-                <a href="{% url 'topics:send_email' session.id %}" class="btn-brutal text-center">НАДІСЛАТИ НА EMAIL</a>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'topics:history' %}" class="btn-brutal text-center">ІСТОРІЯ СЕСІЙ</a>
-                {% endif %}
+            <div id="status-text" class="mt-2 fw-bold font-monospace text-uppercase text-danger">
+                {% if finished %}ЗАВЕРШЕНО{% else %}ОЧІКУВАННЯ{% endif %}
             </div>
         </div>
     </div>
 
-    <div class="col-lg-8">
-        <div class="card-brutal p-0" style="height: 100%; min-height: 600px; display: flex; flex-direction: column;">
-            <div class="border-bottom p-3 d-flex justify-content-between align-items-center bg-light">
-                <span class="fw-bold font-monospace">TERMINAL_OUTPUT.LOG</span>
-                <span class="status-dot"></span>
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="agent-window" id="window-generator">
+                <div class="agent-window-header">
+                    <span>[GEN] ГЕНЕРАТОР</span>
+                    <span>
+                        <span id="status-generator" class="step-status text-muted me-2">ОЧІКУВАННЯ</span>
+                        <span class="expand-btn" onclick="toggleExpand('window-generator')">[Розгорнути]</span>
+                    </span>
+                </div>
+                <div id="container-generator" class="agent-window-body" data-agent="generator"></div>
             </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="agent-window" id="window-critic">
+                <div class="agent-window-header">
+                    <span>[CRT] КРИТИК</span>
+                    <span>
+                        <span id="status-critic" class="step-status text-muted me-2">ОЧІКУВАННЯ</span>
+                        <span class="expand-btn" onclick="toggleExpand('window-critic')">[Розгорнути]</span>
+                    </span>
+                </div>
+                <div id="container-critic" class="agent-window-body" data-agent="critic"></div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="agent-window" id="window-judge">
+                <div class="agent-window-header">
+                    <span>[JDG] СУДДЯ</span>
+                    <span>
+                        <span id="status-judge" class="step-status text-muted me-2">ОЧІКУВАННЯ</span>
+                        <span class="expand-btn" onclick="toggleExpand('window-judge')">[Розгорнути]</span>
+                    </span>
+                </div>
+                <div id="container-judge" class="agent-window-body" data-agent="judge"></div>
+            </div>
+        </div>
+    </div>
 
-            <div id="chat-container" class="p-3" style="flex-grow: 1; overflow-y: auto; background: #fafafa;">
-                {% for m in history %}
-                    <div class="mb-3 p-3 rounded-0 border border-dark
-                        {% if m.agent == 'generator' %}bg-primary text-white
-                        {% elif m.agent == 'critic' %}bg-warning text-dark
-                        {% elif m.agent == 'judge' %}bg-success text-white
-                        {% else %}bg-white text-dark{% endif %}">
-                        <div class="fw-bold font-monospace mb-2 border-bottom pb-1">
-                            {{ m.get_agent_display|upper }} ({{ m.provider }})
-                        </div>
-                        <div class="font-monospace small" style="white-space: pre-wrap;">{{ m.content }}</div>
-                    </div>
-                {% empty %}
-                    <div class="text-center text-muted mt-5 font-monospace" id="empty-state">
-                        СИСТЕМА ГОТОВА ДО ЗАПУСКУ<br>
-                        НАТИСНІТЬ "ПОЧАТИ КОЛО {{ next_round }}"
-                    </div>
-                {% endfor %}
-            </div>
+    <div class="results-panel" id="results-panel">
+        <h4 class="fw-bold mb-3 border-bottom border-dark pb-2">РЕЗУЛЬТАТИ ДЕБАТІВ</h4>
+        <div class="row g-3" id="topics-container"></div>
+        <div class="mt-4 text-end">
+            <a href="{% url 'topics:send_email' session.id %}" class="btn-brutal me-2">НАДІСЛАТИ НА EMAIL</a>
+            <a href="{% url 'topics:history' %}" class="btn-brutal">ІСТОРІЯ СЕСІЙ</a>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    const btn = document.getElementById('start-btn');
-    const chat = document.getElementById('chat-container');
-    const statusEl = document.getElementById('status-text');
-
-    const STREAM_URL = btn.dataset.streamUrl;
-    const TOTAL_ROUNDS = parseInt(btn.dataset.totalRounds, 10);
-
-    const SENDERS = {generator: 'Генератор', critic: 'Критик', judge: 'Суддя'};
-    const STYLES = {
-        generator: 'bg-primary text-white',
-        critic: 'bg-warning text-dark',
-        judge: 'bg-success text-white',
-    };
-
-    function appendMessage(title, text, bgClass) {
-        const empty = document.getElementById('empty-state');
-        if (empty) empty.remove();
-
-        const msg = document.createElement('div');
-        msg.className = 'mb-3 p-3 rounded-0 border border-dark ' + bgClass;
-
-        const header = document.createElement('div');
-        header.className = 'fw-bold font-monospace mb-2 border-bottom pb-1';
-        header.textContent = title.toUpperCase();
-
-        const content = document.createElement('div');
-        content.className = 'font-monospace small';
-        content.style.whiteSpace = 'pre-wrap';
-        content.textContent = text;
-
-        msg.append(header, content);
-        chat.appendChild(msg);
-        chat.scrollTop = chat.scrollHeight;
-    }
-
-    function summaryText(topics) {
-        return topics
-            .slice()
-            .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-            .map(t => (t.score !== null ? t.score + '/10' : '—/10') + '  ' + t.title + ' (' + t.difficulty + ')')
-            .join('\n');
-    }
-
-    function setNextRound(roundNo) {
-        btn.disabled = false;
-        btn.textContent = 'ПОЧАТИ КОЛО ' + roundNo;
-        btn.onclick = () => startDebate(roundNo);
-    }
-
-    function startDebate(roundNo) {
-        btn.disabled = true;
-        btn.textContent = 'З\u2019ЄДНАННЯ...';
-        statusEl.textContent = 'З\u2019ЄДНАННЯ З СЕРВЕРОМ...';
-
-        const source = new EventSource(STREAM_URL + '?round=' + roundNo);
-        let finished = false;
-
-        source.onmessage = (event) => {
-            let data;
-            try {
-                data = JSON.parse(event.data);
-            } catch (e) {
-                console.error('Некоректна подія SSE:', event.data);
-                return;
-            }
-
-            if (data.type === 'status') {
-                statusEl.textContent = data.text.toUpperCase();
-
-            } else if (data.type === 'agent') {
-                appendMessage(SENDERS[data.agent] + ' (' + data.provider + ')',
-                              data.text, STYLES[data.agent] || 'bg-white text-dark');
-
-            } else if (data.type === 'round_done') {
-                finished = true;
-                source.close();
-                appendMessage('Підсумок кола ' + data.round, summaryText(data.topics), 'bg-white text-dark');
-                if (data.round < TOTAL_ROUNDS) {
-                    statusEl.textContent = 'КОЛО ' + data.round + ' ЗАВЕРШЕНО';
-                    setNextRound(data.round + 1);
-                } else {
-                    statusEl.textContent = 'ВСІ КОЛА ЗАВЕРШЕНО';
-                    btn.textContent = 'ДЕБАТИ ЗАВЕРШЕНО';
-                }
-
-            } else if (data.type === 'error') {
-                finished = true;
-                source.close();
-                appendMessage('ПОМИЛКА', data.text, 'bg-danger text-white');
-                statusEl.textContent = 'ПОМИЛКА';
-                btn.disabled = false;
-                btn.textContent = 'СПРОБУВАТИ ЩЕ РАЗ';
-                btn.onclick = () => startDebate(roundNo);
-            }
-        };
-
-        source.onerror = () => {
-            source.close();
-            if (finished) return;
-            statusEl.textContent = 'ПОМИЛКА З\u2019ЄДНАННЯ';
-            btn.disabled = false;
-            btn.textContent = 'СПРОБУВАТИ ЩЕ РАЗ';
-            btn.onclick = () => startDebate(roundNo);
-        };
-    }
-
-    if (!btn.disabled) {
-        btn.onclick = () => startDebate(parseInt(btn.dataset.nextRound, 10));
-    }
-</script>
 {% endblock %}
