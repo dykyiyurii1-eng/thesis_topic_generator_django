@@ -7,12 +7,12 @@ from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import (ListView, DetailView, CreateView,
                                   UpdateView, DeleteView)
-
+from datetime import timedelta
+from django.utils import timezone
+from django.contrib import messages
 from .forms import GenerationSessionForm
 from .models import Interest, Question, GenerationSession, GeneratedTopic
 from .services import process_quiz_results, run_debate_pipeline
-
-
 def sessions_for_request(request):
     if request.user.is_authenticated:
         return GenerationSession.objects.filter(student=request.user)
@@ -20,13 +20,9 @@ def sessions_for_request(request):
     if not key:
         return GenerationSession.objects.none()
     return GenerationSession.objects.filter(student__isnull=True, guest_key=key)
-
-
 def home_view(request):
     interests = Interest.objects.all()[:6]
     return render(request, 'topics/home.html', {'interests': interests})
-
-
 def quiz_view(request):
     if request.method == 'POST':
         selected_options = request.POST.getlist('options')
@@ -34,11 +30,8 @@ def quiz_view(request):
         if not request.user.is_authenticated:
             request.session['guest_interests'] = [i.id for i in results]
         return redirect('topics:home')
-
     questions = Question.objects.prefetch_related('options').all()
     return render(request, 'topics/quiz.html', {'questions': questions})
-
-
 def suggest_interests_view(request):
     query = request.GET.get('q', '').strip()
     if query:
@@ -47,8 +40,6 @@ def suggest_interests_view(request):
         interests = Interest.objects.all()[:10]
     results = [{'id': i.id, 'text': f"{i.name} ({i.category})"} for i in interests]
     return JsonResponse({'results': results})
-
-
 def debate_stream_view(request, session_id):
     session = get_object_or_404(sessions_for_request(request), id=session_id)
     round_no = int(request.GET.get('round', 1))
@@ -56,8 +47,6 @@ def debate_stream_view(request, session_id):
                                      content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'
     return response
-
-
 @login_required
 @require_POST
 def pin_topic_view(request, topic_id):
@@ -65,8 +54,6 @@ def pin_topic_view(request, topic_id):
     topic.is_pinned = not topic.is_pinned
     topic.save(update_fields=['is_pinned'])
     return JsonResponse({'pinned': topic.is_pinned})
-
-
 def trial_generate_view(request):
     if request.method == 'POST':
         form = GenerationSessionForm(request.POST)
@@ -82,37 +69,35 @@ def trial_generate_view(request):
     else:
         form = GenerationSessionForm()
     return render(request, 'topics/generate.html', {'form': form})
-
-
 class SessionCreateView(LoginRequiredMixin, CreateView):
     model = GenerationSession
     form_class = GenerationSessionForm
     template_name = 'topics/generate.html'
-
     def form_valid(self, form):
         form.instance.student = self.request.user
         form.instance.status = 'running'
         return super().form_valid(form)
-
     def get_success_url(self):
         return reverse('topics:debate_page', kwargs={'session_id': self.object.id})
-
-
 class DebatePageView(DetailView):
     template_name = 'topics/debate.html'
     context_object_name = 'session'
     pk_url_kwarg = 'session_id'
-
     def get_queryset(self):
         return sessions_for_request(self.request)
-
-
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        session = self.object
+        done_rounds = session.messages.filter(agent='judge').count()
+        context['history'] = session.messages.all()
+        context['next_round'] = done_rounds + 1
+        context['finished'] = done_rounds >= session.rounds
+        return context
 class SessionListView(LoginRequiredMixin, ListView):
     model = GenerationSession
     template_name = 'topics/history_list.html'
     context_object_name = 'sessions'
     paginate_by = 10
-
     def get_queryset(self):
         qs = (GenerationSession.objects
               .filter(student=self.request.user)
@@ -122,53 +107,75 @@ class SessionListView(LoginRequiredMixin, ListView):
             qs = qs.filter(Q(specialty__icontains=q) |
                            Q(interests__name__icontains=q)).distinct()
         return qs
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['q'] = self.request.GET.get('q', '').strip()
         return context
-
-
 class SessionDetailView(LoginRequiredMixin, DetailView):
     model = GenerationSession
     template_name = 'topics/history_detail.html'
     context_object_name = 'session'
-
     def get_queryset(self):
         return (GenerationSession.objects
                 .filter(student=self.request.user)
                 .prefetch_related('topics', 'interests'))
-
-
 class SessionUpdateView(LoginRequiredMixin, UpdateView):
     form_class = GenerationSessionForm
     template_name = 'topics/generate.html'
-
     def get_queryset(self):
         return GenerationSession.objects.filter(student=self.request.user)
-
-
 class SessionDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'topics/session_confirm_delete.html'
     context_object_name = 'session'
     success_url = reverse_lazy('topics:history')
-
     def get_queryset(self):
         return GenerationSession.objects.filter(student=self.request.user)
-from django.core.mail import send_mail  
-from .forms import ContactForm
-
-def contact_view(request):
+from django.core.mail import send_mail
+from .forms import EmailSendForm
+def send_session_email_view(request, session_id):
+    session = get_object_or_404(GenerationSession, id=session_id)
     if request.method == 'POST':
-        form = ContactForm(request.POST)
+        form = EmailSendForm(request.POST)
         if form.is_valid():
-            subject = f"Повідомлення від {form.cleaned_data['name']}"
-            message = form.cleaned_data['message']
-            sender = form.cleaned_data['email']
-            recipient_list = ['твоя_пошта@gmail.com'] # Куди надсилати
-
-            send_mail(subject, message, sender, recipient_list)
-            return render(request, 'topics/contact_success.html')
+            email = form.cleaned_data['email']
+            topics = session.topics.all()
+            message = f"Ваші згенеровані теми для спеціальності '{session.specialty}':\n\n"
+            for i, t in enumerate(topics, 1):
+                message += f"{i}. {t.title}\n   Оцінка: {t.score}/10\n   Коментар: {t.critic_comment}\n\n"
+            send_mail(
+                subject="Ваші згенеровані теми",
+                message=message,
+                from_email='noreply@thesis-gen.com',
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            return render(request, 'topics/email_success.html', {'email': email})
     else:
-        form = ContactForm()
-    return render(request, 'topics/contact.html', {'form': form})
+        form = EmailSendForm()
+    return render(request, 'topics/email_form.html', {'form': form, 'session': session})
+def send_session_email_view(request, session_id):
+    session = get_object_or_404(GenerationSession, id=session_id)
+    if request.method == 'POST':
+        form = EmailSendForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            topics = session.topics.all()
+            message = f"Ваші згенеровані теми для спеціальності '{session.specialty}':\n\n"
+            for i, t in enumerate(topics, 1):
+                message += f"{i}. {t.title}\n   Оцінка: {t.score}/10\n   Коментар: {t.critic_comment}\n\n"
+            send_mail(
+                subject="Ваші згенеровані теми",
+                message=message,
+                from_email='noreply@thesis-gen.com',
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            return render(request, 'topics/email_form.html', {'email': email, 'session': session})
+    else:
+        form = EmailSendForm()
+    return render(request, 'topics/email_form.html', {'form': form, 'session': session})
+def home_view(request):
+    from .models import HomePageImage
+    interests = Interest.objects.all()[:6]
+    hero_image = HomePageImage.objects.filter(is_active=True).first()
+    return render(request, 'topics/home.html', {'interests': interests, 'hero_image': hero_image})

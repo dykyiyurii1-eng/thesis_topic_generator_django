@@ -1,8 +1,6 @@
 from django.urls import path
 from . import views
-
 app_name = 'topics'
-
 urlpatterns = [
     path('', views.home_view, name='home'),
     path('quiz/', views.quiz_view, name='quiz'),
@@ -15,4 +13,5 @@ urlpatterns = [
     path('history/<int:pk>/', views.SessionDetailView.as_view(), name='history_detail'),
     path('history/<int:pk>/edit/', views.SessionUpdateView.as_view(), name='session_edit'),
     path('history/<int:pk>/delete/', views.SessionDeleteView.as_view(), name='session_delete'),
+    path('session/<int:session_id>/email/', views.send_session_email_view, name='send_email'),
 ]

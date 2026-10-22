@@ -1,5 +1,4 @@
 from django.db import migrations
-
 INTERESTS = [
     ('Штучний інтелект', 'ai', 'Дані й ШІ'),
     ('Машинне навчання', 'machine-learning', 'Дані й ШІ'),
@@ -32,7 +31,6 @@ INTERESTS = [
     ('Віртуальна реальність', 'vr-ar', 'Ігри'),
     ('Інтерактивні медіа', 'interactive-media', 'Ігри'),
 ]
-
 QUESTIONS = [
     ('Що вам цікавіше робити в проєкті?', [
         ('Навчати програму знаходити закономірності в даних', [('machine-learning', 2), ('data-analysis', 1)]),
@@ -83,21 +81,17 @@ QUESTIONS = [
         ('Створити розвагу чи навчальну гру', [('gamification', 2), ('game-development', 1)]),
     ]),
 ]
-
-
 def seed(apps, schema_editor):
     Interest = apps.get_model('topics', 'Interest')
     Question = apps.get_model('topics', 'Question')
     Option = apps.get_model('topics', 'Option')
     OptionInterest = apps.get_model('topics', 'OptionInterest')
-
     by_slug = {}
     for name, slug, category in INTERESTS:
         obj, _ = Interest.objects.get_or_create(
             slug=slug, defaults={'name': name, 'category': category}
         )
         by_slug[slug] = obj
-
     for order, (text, options) in enumerate(QUESTIONS, start=1):
         question, _ = Question.objects.get_or_create(text=text, defaults={'order': order})
         for option_text, links in options:
@@ -106,21 +100,15 @@ def seed(apps, schema_editor):
                 OptionInterest.objects.get_or_create(
                     option=option, interest=by_slug[slug], defaults={'weight': weight}
                 )
-
-
 def unseed(apps, schema_editor):
     Interest = apps.get_model('topics', 'Interest')
     Question = apps.get_model('topics', 'Question')
     Question.objects.filter(text__in=[q[0] for q in QUESTIONS]).delete()
     Interest.objects.filter(slug__in=[i[1] for i in INTERESTS]).delete()
-
-
 class Migration(migrations.Migration):
-
     dependencies = [
         ('topics', '0002_interest_option_question_generationsession_and_more'),
     ]
-
     operations = [
         migrations.RunPython(seed, unseed),
     ]

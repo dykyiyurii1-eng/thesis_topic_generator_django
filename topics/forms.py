@@ -1,6 +1,5 @@
 from django import forms
 from .models import GenerationSession
-
 class GenerationSessionForm(forms.ModelForm):
     class Meta:
         model = GenerationSession
@@ -13,3 +12,8 @@ class GenerationSessionForm(forms.ModelForm):
             'rounds': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 3}),
             'interests': forms.CheckboxSelectMultiple(),
         }
+class EmailSendForm(forms.Form):
+    email = forms.EmailField(
+        label="Введіть ваш Email",
+        widget=forms.EmailInput(attrs={'class': 'form-control rounded-0 border-dark', 'placeholder': 'example@mail.com'})
+    )

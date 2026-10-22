@@ -1,126 +1,194 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Дебати · Сесія {{ session.id }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-3">Дебати щодо генерації тем</h2>
-    <p class="text-muted">Спеціальність: {{ session.specialty }} | Кіл: {{ session.rounds }}</p>
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card-brutal">
+            <span class="tech-index">SYS.DEBATE // INFO</span>
+            <h2 class="mt-3 mb-4">ДЕБАТИ ШІ</h2>
 
-    <div id="chat-container" class="border rounded p-3 mb-3 bg-light" style="height: 500px; overflow-y: auto;">
-        <div class="text-center text-muted mt-5" id="empty-state">
-            Натисніть кнопку нижче, щоб почати генерацію
+            <div class="mb-3">
+                <span class="text-muted small d-block">СПЕЦІАЛЬНІСТЬ:</span>
+                <span class="fw-bold fs-5">{{ session.specialty }}</span>
+            </div>
+
+            <div class="mb-3">
+                <span class="text-muted small d-block">КІЛЬКІСТЬ КІЛ:</span>
+                <span class="fw-bold fs-5">{{ session.rounds }}</span>
+            </div>
+
+            <div class="separator"></div>
+
+            <div class="mb-3">
+                <span class="text-muted small d-block">СТАТУС СИСТЕМИ:</span>
+                <div id="status-text" class="fw-bold mt-1">
+                    {% if finished %}ВСІ КОЛА ЗАВЕРШЕНО{% else %}ОЧІКУВАННЯ ЗАПУСКУ{% endif %}
+                </div>
+            </div>
+
+            <button id="start-btn" class="btn-brutal btn-brutal-black w-100 mt-2"
+                    data-next-round="{{ next_round }}"
+                    data-stream-url="{% url 'topics:debate_stream' session.id %}"
+                    data-total-rounds="{{ session.rounds }}"
+                    {% if finished %}disabled{% endif %}>
+                {% if finished %}ДЕБАТИ ЗАВЕРШЕНО{% else %}ПОЧАТИ КОЛО {{ next_round }}{% endif %}
+            </button>
+
+            <div class="separator"></div>
+
+            <div class="d-grid gap-2">
+                <a href="{% url 'topics:send_email' session.id %}" class="btn-brutal text-center">НАДІСЛАТИ НА EMAIL</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'topics:history' %}" class="btn-brutal text-center">ІСТОРІЯ СЕСІЙ</a>
+                {% endif %}
+            </div>
         </div>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center">
-        <button id="start-btn" class="btn btn-success btn-lg" onclick="startDebate(1)">Почати коло 1</button>
-        <div id="status-text" class="text-primary fw-bold"></div>
+    <div class="col-lg-8">
+        <div class="card-brutal p-0" style="height: 100%; min-height: 600px; display: flex; flex-direction: column;">
+            <div class="border-bottom p-3 d-flex justify-content-between align-items-center bg-light">
+                <span class="fw-bold font-monospace">TERMINAL_OUTPUT.LOG</span>
+                <span class="status-dot"></span>
+            </div>
+
+            <div id="chat-container" class="p-3" style="flex-grow: 1; overflow-y: auto; background: #fafafa;">
+                {% for m in history %}
+                    <div class="mb-3 p-3 rounded-0 border border-dark
+                        {% if m.agent == 'generator' %}bg-primary text-white
+                        {% elif m.agent == 'critic' %}bg-warning text-dark
+                        {% elif m.agent == 'judge' %}bg-success text-white
+                        {% else %}bg-white text-dark{% endif %}">
+                        <div class="fw-bold font-monospace mb-2 border-bottom pb-1">
+                            {{ m.get_agent_display|upper }} ({{ m.provider }})
+                        </div>
+                        <div class="font-monospace small" style="white-space: pre-wrap;">{{ m.content }}</div>
+                    </div>
+                {% empty %}
+                    <div class="text-center text-muted mt-5 font-monospace" id="empty-state">
+                        СИСТЕМА ГОТОВА ДО ЗАПУСКУ<br>
+                        НАТИСНІТЬ "ПОЧАТИ КОЛО {{ next_round }}"
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-    const totalRounds = parseInt("{{ session.rounds }}") || 1;
-    const sessionId = "{{ session.id }}";
+    const btn = document.getElementById('start-btn');
+    const chat = document.getElementById('chat-container');
+    const statusEl = document.getElementById('status-text');
 
-    function appendMessage(sender, text, bgClass, icon = "") {
-        const chat = document.getElementById('chat-container');
+    const STREAM_URL = btn.dataset.streamUrl;
+    const TOTAL_ROUNDS = parseInt(btn.dataset.totalRounds, 10);
+
+    const SENDERS = {generator: 'Генератор', critic: 'Критик', judge: 'Суддя'};
+    const STYLES = {
+        generator: 'bg-primary text-white',
+        critic: 'bg-warning text-dark',
+        judge: 'bg-success text-white',
+    };
+
+    function appendMessage(title, text, bgClass) {
         const empty = document.getElementById('empty-state');
-        if (empty) empty.style.display = 'none';
+        if (empty) empty.remove();
 
         const msg = document.createElement('div');
-        msg.className = `mb-3 p-3 rounded shadow-sm ${bgClass}`;
+        msg.className = 'mb-3 p-3 rounded-0 border border-dark ' + bgClass;
 
-        const header = document.createElement('strong');
-        header.textContent = `${icon} ${sender}:`;
+        const header = document.createElement('div');
+        header.className = 'fw-bold font-monospace mb-2 border-bottom pb-1';
+        header.textContent = title.toUpperCase();
 
         const content = document.createElement('div');
-        content.style.whiteSpace = "pre-wrap";
+        content.className = 'font-monospace small';
+        content.style.whiteSpace = 'pre-wrap';
         content.textContent = text;
 
-        msg.appendChild(header);
-        msg.appendChild(content);
+        msg.append(header, content);
         chat.appendChild(msg);
         chat.scrollTop = chat.scrollHeight;
     }
 
+    function summaryText(topics) {
+        return topics
+            .slice()
+            .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+            .map(t => (t.score !== null ? t.score + '/10' : '—/10') + '  ' + t.title + ' (' + t.difficulty + ')')
+            .join('\n');
+    }
+
+    function setNextRound(roundNo) {
+        btn.disabled = false;
+        btn.textContent = 'ПОЧАТИ КОЛО ' + roundNo;
+        btn.onclick = () => startDebate(roundNo);
+    }
+
     function startDebate(roundNo) {
-        const btn = document.getElementById('start-btn');
         btn.disabled = true;
-        document.getElementById('status-text').innerText = 'З\'єднання...';
+        btn.textContent = 'З\u2019ЄДНАННЯ...';
+        statusEl.textContent = 'З\u2019ЄДНАННЯ З СЕРВЕРОМ...';
 
-        const eventSource = new EventSource(`/session/${sessionId}/stream/?round=${roundNo}`);
+        const source = new EventSource(STREAM_URL + '?round=' + roundNo);
+        let finished = false;
 
-        eventSource.onmessage = function(event) {
-            // Логування в консоль браузера (F12 → Console)
+        source.onmessage = (event) => {
+            let data;
             try {
-                const parsed = JSON.parse(event.data);
-                console.log(`%c[SSE] ${parsed.type}`, 'color: #0a0; font-weight: bold;', parsed);
+                data = JSON.parse(event.data);
             } catch (e) {
-                console.warn('[SSE] raw (не JSON):', event.data);
+                console.error('Некоректна подія SSE:', event.data);
+                return;
             }
 
-            try {
-                const data = JSON.parse(event.data);
+            if (data.type === 'status') {
+                statusEl.textContent = data.text.toUpperCase();
 
-                if (data.type === 'status') {
-                    document.getElementById('status-text').innerText = data.text;
+            } else if (data.type === 'agent') {
+                appendMessage(SENDERS[data.agent] + ' (' + data.provider + ')',
+                              data.text, STYLES[data.agent] || 'bg-white text-dark');
 
-                } else if (data.type === 'generator_topics') {
-                    let text = `Я (${data.provider}) пропоную такі теми:\n`;
-                    data.topics.forEach((t, i) => {
-                        text += `${i + 1}. ${t.title}\n   ${t.why || ''}\n`;
-                    });
-                    appendMessage('Генератор', text, 'bg-primary text-white', '🤖');
-
-                } else if (data.type === 'critic_scores') {
-                    let text = `Мій аналіз (${data.provider}):\n`;
-                    data.scores.forEach(s => {
-                        const verdictLabel = {
-                            'keep': '✅ Залишити',
-                            'revise': '🔧 Доопрацювати',
-                            'drop': '❌ Відкинути'
-                        }[s.verdict] || s.verdict || '—';
-
-                        text += `\nТема ${s.id}: ${verdictLabel}`;
-                        if (s.score !== undefined) text += ` (${s.score}/10)`;
-                        if (s.problems) text += `\n   Проблеми: ${s.problems}`;
-                    });
-                    appendMessage('Критик', text, 'bg-warning text-dark', '🧐');
-
-                } else if (data.type === 'error') {
-                    appendMessage('Помилка', data.text, 'bg-danger text-white', '❌');
-                    eventSource.close();
-                    btn.disabled = false;
-
-                } else if (data.type === 'round_done') {
-                    document.getElementById('status-text').innerText = `Коло ${roundNo} завершено!`;
-                    eventSource.close();
-
-                    if (roundNo < totalRounds) {
-                        btn.disabled = false;
-                        btn.innerText = `Почати коло ${roundNo + 1}`;
-                        btn.onclick = function() { startDebate(roundNo + 1); };
-                    } else {
-                        document.getElementById('status-text').innerText = 'Усі кола завершено!';
-                        btn.disabled = false;
-                        btn.innerText = 'Переглянути історію';
-                        btn.className = 'btn btn-primary btn-lg';
-                        btn.onclick = function() {
-                            window.location.href = `/session/${sessionId}/history/`;
-                        };
-                    }
+            } else if (data.type === 'round_done') {
+                finished = true;
+                source.close();
+                appendMessage('Підсумок кола ' + data.round, summaryText(data.topics), 'bg-white text-dark');
+                if (data.round < TOTAL_ROUNDS) {
+                    statusEl.textContent = 'КОЛО ' + data.round + ' ЗАВЕРШЕНО';
+                    setNextRound(data.round + 1);
+                } else {
+                    statusEl.textContent = 'ВСІ КОЛА ЗАВЕРШЕНО';
+                    btn.textContent = 'ДЕБАТИ ЗАВЕРШЕНО';
                 }
-            } catch (e) {
-                console.error("Помилка обробки SSE:", e);
+
+            } else if (data.type === 'error') {
+                finished = true;
+                source.close();
+                appendMessage('ПОМИЛКА', data.text, 'bg-danger text-white');
+                statusEl.textContent = 'ПОМИЛКА';
+                btn.disabled = false;
+                btn.textContent = 'СПРОБУВАТИ ЩЕ РАЗ';
+                btn.onclick = () => startDebate(roundNo);
             }
         };
 
-        eventSource.onerror = function() {
-            document.getElementById('status-text').innerText = 'Помилка з\'єднання.';
-            eventSource.close();
+        source.onerror = () => {
+            source.close();
+            if (finished) return;
+            statusEl.textContent = 'ПОМИЛКА З\u2019ЄДНАННЯ';
             btn.disabled = false;
+            btn.textContent = 'СПРОБУВАТИ ЩЕ РАЗ';
+            btn.onclick = () => startDebate(roundNo);
         };
+    }
+
+    if (!btn.disabled) {
+        btn.onclick = () => startDebate(parseInt(btn.dataset.nextRound, 10));
     }
 </script>
 {% endblock %}

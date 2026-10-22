@@ -1,25 +1,17 @@
 import json
 from collections import defaultdict
-
-from django.db import transaction
-
 from .llm import call_with_fallback, parse_json_response, LLMError
 from .models import StudentInterest, Interest, OptionInterest, GeneratedTopic, AgentMessage
-from .prompts import GENERATOR_SYSTEM, CRITIC_SYSTEM, build_generator_input, build_critic_input
-
-
+from .prompts import (GENERATOR_SYSTEM, CRITIC_SYSTEM, JUDGE_SYSTEM,
+                      build_generator_input, build_critic_input, build_judge_input)
 def process_quiz_results(user, selected_option_ids):
     if not selected_option_ids:
         return []
-
     weights = defaultdict(float)
     option_interests = OptionInterest.objects.filter(option_id__in=selected_option_ids)
-
     for oi in option_interests:
         weights[oi.interest_id] += oi.weight
-
     sorted_interests = sorted(weights.items(), key=lambda x: x[1], reverse=True)[:5]
-
     result_interests = []
     if user.is_authenticated:
         StudentInterest.objects.filter(student=user, source='quiz').delete()
@@ -30,93 +22,108 @@ def process_quiz_results(user, selected_option_ids):
     else:
         for interest_id, weight in sorted_interests:
             result_interests.append(Interest.objects.get(id=interest_id))
-
     return result_interests
-
-
+def sse(**payload):
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+def _fail(session, text):
+    session.status = 'error'
+    session.save(update_fields=['status'])
+    yield sse(type='error', text=text)
+def _clean_score(value):
+    try:
+        score = round(float(value), 1)
+    except (TypeError, ValueError):
+        return None
+    return score if 1 <= score <= 10 else None
+def _save_message(session, agent, provider, text, seq):
+    AgentMessage.objects.create(session=session, agent=agent, provider=provider,
+                                content=text, sequence_number=seq)
 def run_debate_pipeline(session, round_no):
-    yield f"data: {json.dumps({'type': 'status', 'text': f'Генератор пише... (Коло {round_no} з {session.rounds})'})}\n\n"
-
+    if not 1 <= round_no <= session.rounds:
+        yield sse(type='error', text='Некоректний номер кола.')
+        return
+    seq = (round_no - 1) * 3
+    if session.messages.filter(sequence_number=seq + 3).exists():
+        yield sse(type='error', text='Це коло вже виконано.')
+        return
+    session.topics.filter(round=round_no).delete()
+    session.messages.filter(sequence_number__gt=seq, sequence_number__lte=seq + 3).delete()
     ctx = {
         'specialty': session.specialty,
-        'education': session.institution_type,
+        'education': session.level or session.institution_type,
         'interests': [(i.name, 'high') for i in session.interests.all()],
-        'round_no': round_no,
-        'total_rounds': session.rounds,
-        'pinned_ids': list(session.topics.filter(is_pinned=True).values_list('topic_key', flat=True)),
-        'user_hint': ''
     }
-
-    # --- Генератор ---
+    yield sse(type='status', text=f'Генератор пише... (коло {round_no} з {session.rounds})')
     try:
-        raw_gen, provider_gen = call_with_fallback('generator', GENERATOR_SYSTEM, build_generator_input(ctx))
-        topics_data = parse_json_response(raw_gen)
+        raw, provider = call_with_fallback('generator', GENERATOR_SYSTEM, build_generator_input(ctx))
+        data = parse_json_response(raw)
     except LLMError as e:
-        yield f"data: {json.dumps({'type': 'error', 'text': str(e)})}\n\n"
+        yield from _fail(session, str(e))
         return
-
-    saved_topics = []
-    with transaction.atomic():
-        for i, t in enumerate(topics_data):
-            topic_key = f"r{round_no}_{i+1}"
-            topic, created = GeneratedTopic.objects.update_or_create(
-                session=session,
-                topic_key=topic_key,
-                defaults={
-                    'title': t.get('title', 'Без назви'),
-                    'why': t.get('why', ''),
-                    'difficulty': t.get('difficulty', 'medium'),
-                    'round': round_no,
-                }
-            )
-            saved_topics.append(topic)
-
-        AgentMessage.objects.update_or_create(
+    items = [t for t in data if isinstance(t, dict)] if isinstance(data, list) else []
+    if not items:
+        yield from _fail(session, 'Генератор повернув порожню відповідь.')
+        return
+    saved = []
+    for n, t in enumerate(items, 1):
+        difficulty = t.get('difficulty')
+        saved.append(GeneratedTopic.objects.create(
             session=session,
-            sequence_number=round_no * 2 - 1,
-            defaults={
-                "agent": "generator",
-                "provider": provider_gen,
-                "content": raw_gen,
-            },
-        )
-
-    topics_payload = [{'id': t.topic_key, 'title': t.title, 'why': t.why} for t in saved_topics]
-    yield f"data: {json.dumps({'type': 'generator_topics', 'provider': provider_gen, 'topics': topics_payload}, ensure_ascii=False)}\n\n"
-
-    yield f"data: {json.dumps({'type': 'status', 'text': 'Критик оцінює...'})}\n\n"
-
-    # --- Критик ---
-    topics_for_critic = [{'id': t.topic_key, 'title': t.title, 'why': t.why} for t in saved_topics]
+            topic_key=f"r{round_no}_{n}",
+            title=str(t.get('title', 'Без назви'))[:300],
+            why=str(t.get('why', '')),
+            difficulty=difficulty if difficulty in ('easy', 'medium', 'hard') else 'medium',
+            round=round_no,
+        ))
+    text = "\n\n".join(f"{n}. {t.title} ({t.get_difficulty_display()})\n{t.why}"
+                       for n, t in enumerate(saved, 1))
+    _save_message(session, 'generator', provider, text, seq + 1)
+    yield sse(type='agent', agent='generator', provider=provider, round=round_no, text=text)
+    yield sse(type='status', text='Критик шукає слабкі місця...')
+    by_key = {t.topic_key: t for t in saved}
+    for_critic = [{'id': t.topic_key, 'title': t.title, 'why': t.why} for t in saved]
     try:
-        raw_cri, provider_cri = call_with_fallback('critic', CRITIC_SYSTEM, build_critic_input(ctx, topics_for_critic))
-        critic_data = parse_json_response(raw_cri)
+        raw, provider = call_with_fallback('critic', CRITIC_SYSTEM, build_critic_input(ctx, for_critic))
+        data = parse_json_response(raw)
     except LLMError as e:
-        yield f"data: {json.dumps({'type': 'error', 'text': f'Критик недоступний: {e}'})}\n\n"
+        yield from _fail(session, f'Критик недоступний: {e}')
         return
-
-    yield f"data: {json.dumps({'type': 'critic_scores', 'provider': provider_cri, 'scores': critic_data}, ensure_ascii=False)}\n\n"
-
-    with transaction.atomic():
-        for c in critic_data:
-            t_id = c.get('id')
-            topic = next((t for t in saved_topics if t.topic_key == t_id), None)
-            if topic:
-                topic.score = c.get('score') or 5
-                topic.critic_comment = c.get('problems', '')
-                # Якщо у моделі є поле verdict — збережіть його:
-                if hasattr(topic, 'verdict'):
-                    topic.verdict = c.get('verdict', '')
-                topic.save()
-
-        AgentMessage.objects.update_or_create(
-            session=session,
-            sequence_number=round_no * 2,
-            defaults={
-                "agent": "critic",
-                "provider": provider_cri,
-                "content": raw_cri,
-            },
-        )
-
-    yield f"data: {json.dumps({'type': 'round_done', 'round': round_no})}\n\n"
+    reviews = [c for c in data if isinstance(c, dict) and c.get('id') in by_key] if isinstance(data, list) else []
+    lines = []
+    for c in reviews:
+        t = by_key[c['id']]
+        t.critic_comment = str(c.get('problems', ''))
+        t.save(update_fields=['critic_comment'])
+        lines.append(f"{t.title}\n→ {c.get('verdict', '?')}: {t.critic_comment}")
+    text = "\n\n".join(lines) or 'Критик не надав зауважень.'
+    _save_message(session, 'critic', provider, text, seq + 2)
+    yield sse(type='agent', agent='critic', provider=provider, round=round_no, text=text)
+    yield sse(type='status', text='Суддя виносить оцінки...')
+    for_judge = [{'id': t.topic_key, 'title': t.title, 'why': t.why, 'critic': t.critic_comment}
+                 for t in saved]
+    try:
+        raw, provider = call_with_fallback('judge', JUDGE_SYSTEM, build_judge_input(ctx, for_judge))
+        data = parse_json_response(raw)
+    except LLMError as e:
+        yield from _fail(session, f'Суддя недоступний: {e}')
+        return
+    verdicts = [v for v in data if isinstance(v, dict) and v.get('id') in by_key] if isinstance(data, list) else []
+    lines = []
+    for v in verdicts:
+        t = by_key[v['id']]
+        score = _clean_score(v.get('score'))
+        if score is not None:
+            t.score = score
+            t.save(update_fields=['score'])
+        lines.append(f"{t.title}\n→ {score if score is not None else '—'}/10. {v.get('reason', '')}")
+    text = "\n\n".join(lines) or 'Суддя не виніс оцінок.'
+    _save_message(session, 'judge', provider, text, seq + 3)
+    yield sse(type='agent', agent='judge', provider=provider, round=round_no, text=text)
+    if round_no == session.rounds:
+        session.status = 'done'
+        session.save(update_fields=['status'])
+    yield sse(type='round_done', round=round_no, topics=[
+        {'db_id': t.id, 'title': t.title, 'difficulty': t.get_difficulty_display(),
+         'score': float(t.score) if t.score is not None else None}
+        for t in saved
+    ])

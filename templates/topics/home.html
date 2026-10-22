@@ -8,6 +8,18 @@
 {% endblock %}
 
 {% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card-brutal p-0" style="overflow: hidden;">
+          {% if hero_image %}
+    <img src="{{ hero_image.image.url }}" alt="AI Debate Process" class="img-fluid w-100">
+{% endif %}
+     alt="AI Debate Process" 
+     class="img-fluid w-100" 
+     style="border-bottom: 1px solid #000; display: block;">
+        </div>
+    </div>
+</div>
 <div class="row g-4">
     
     <div class="col-lg-8">
@@ -85,6 +97,6 @@
             <p class="small text-muted mb-0">Закріпи тему, яка тобі сподобалась, та збережи її в особистій історії генерацій.</p>
         </div>
     </div>
-
+    
 </div>
 {% endblock %}

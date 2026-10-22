@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Надіслати на Email · THESIS_GEN{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8 col-lg-6">
+        <div class="card-brutal">
+            <span class="tech-index">SYS.EMAIL // EXPORT</span>
+            
+            {% if email %}
+
+                <h2 class="mb-4">✅ Лист відправлено!</h2>
+                <p class="fs-5">Текст вашого листа успішно сформовано та відправлено на адресу:</p>
+                <div class="bg-light p-3 border border-dark mb-4 fw-bold text-center">
+                    {{ email }}
+                </div>
+                <p class="text-muted small">
+                    * Оскільки зараз увімкнено режим розробки (Console Backend), ви можете побачити повний текст листа у терміналі VS Code.
+                </p>
+                <div class="separator"></div>
+                <div class="d-flex gap-3">
+                    <a href="{% url 'topics:debate_page' session.id %}" class="btn-brutal w-100">← Повернутися до дебатів</a>
+                </div>
+            {% else %}
+
+                <h2 class="mb-4">Надіслати теми</h2>
+                <p class="text-muted mb-4">Введіть свою електронну пошту, і ми надішлемо вам список згенерованих тем для спеціальності <strong>{{ session.specialty }}</strong>.</p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger small fw-bold mt-1">{{ form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn-brutal btn-brutal-black w-100">ВІДПРАВИТИ ЛИСТ →</button>
+                </form>
+                
+                <div class="separator"></div>
+                <div class="text-center small">
+                    <a href="{% url 'topics:debate_page' session.id %}" class="fw-bold">[ СКАСУВАТИ ]</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
