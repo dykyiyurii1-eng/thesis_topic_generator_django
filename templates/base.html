@@ -17,12 +17,17 @@
 <body>
     <header class="site-header">
         <a class="brand-logo fs-4" href="{% url 'topics:home' %}">THESIS_GEN *</a>
-        <nav class="d-flex gap-4">
+               <nav class="d-flex gap-4 align-items-center">
             <a href="{% url 'topics:home' %}">[ 01_HOME ]</a>
             <a href="{% url 'topics:quiz' %}">[ 02_TEST ]</a>
             <a href="{% url 'topics:history' %}">[ 03_HISTORY ]</a>
+            
             {% if user.is_authenticated %}
-                <a href="#" style="text-decoration: line-through;">{{ user.username }}</a>
+                <span class="text-muted fw-bold">{{ user.username }}</span>
+                <form action="{% url 'accounts:logout' %}" method="post" class="m-0 p-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-link p-0 text-decoration-none fw-bold" style="color: black; border: none;">[ ВИЙТИ ]</button>
+                </form>
             {% else %}
                 <a href="{% url 'accounts:login' %}">[ LOGIN ]</a>
             {% endif %}

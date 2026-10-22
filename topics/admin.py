@@ -48,3 +48,10 @@ class GeneratedTopicAdmin(admin.ModelAdmin):
 class AgentMessageAdmin(admin.ModelAdmin):
     list_display = ('session', 'agent', 'provider', 'sequence_number', 'created_at')
     list_filter = ('agent',)
+
+from .models import HomePageImage
+
+@admin.register(HomePageImage)
+class HomePageImageAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'is_active')
+    list_filter = ('is_active',)
