@@ -1,4 +1,5 @@
 from datetime import timedelta
+import os
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -13,7 +14,8 @@ from django.views.generic import (ListView, DetailView, CreateView,
                                   UpdateView, DeleteView)
 
 from .forms import GenerationSessionForm, EmailSendForm
-from .models import Interest, Question, GenerationSession, GeneratedTopic, HomePageImage
+from .models import (Interest, Question, GenerationSession, GeneratedTopic,
+                     AgentMessage, HomePageImage)
 from .services import process_quiz_results, run_debate_pipeline
 
 
@@ -29,7 +31,16 @@ def sessions_for_request(request):
 def home_view(request):
     interests = Interest.objects.all()[:6]
     hero_image = HomePageImage.objects.filter(is_active=True).first()
-    return render(request, 'topics/home.html', {'interests': interests, 'hero_image': hero_image})
+    ai_models = {
+        'gemini': os.getenv('GEMINI_MODEL', 'gemini-2.5-flash'),
+        'groq': os.getenv('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+        'openrouter': os.getenv('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct:free')
+    }
+    return render(request, 'topics/home.html', {
+        'interests': interests, 
+        'hero_image': hero_image,
+        'ai_models': ai_models
+    })
 
 
 def quiz_view(request):
@@ -39,7 +50,6 @@ def quiz_view(request):
         if not request.user.is_authenticated:
             request.session['guest_interests'] = [i.id for i in results]
         return redirect('topics:home')
-
     questions = Question.objects.prefetch_related('options').all()
     return render(request, 'topics/quiz.html', {'questions': questions})
 
@@ -60,7 +70,6 @@ def debate_stream_view(request, session_id):
         round_no = int(request.GET.get('round', 1))
     except ValueError:
         return JsonResponse({'error': 'Некоректний номер кола.'}, status=400)
-    
     response = StreamingHttpResponse(run_debate_pipeline(session, round_no),
                                      content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'
@@ -129,7 +138,6 @@ class SessionCreateView(LoginRequiredMixin, CreateView):
     template_name = 'topics/generate.html'
 
     def dispatch(self, request, *args, **kwargs):
-  
         if request.user.is_authenticated and not request.user.is_staff:
             since = timezone.now() - timedelta(days=1)
             used = GenerationSession.objects.filter(
@@ -154,15 +162,35 @@ class DebatePageView(DetailView):
     pk_url_kwarg = 'session_id'
 
     def get_queryset(self):
-        return sessions_for_request(self.request)
+        if self.request.user.is_authenticated:
+            return GenerationSession.objects.filter(student=self.request.user)
+        key = self.request.session.session_key
+        return GenerationSession.objects.filter(student__isnull=True, guest_key=key)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         session = self.object
+        
         done_rounds = session.messages.filter(agent='judge').count()
-        context['history'] = session.messages.all()
+        
+        context['history'] = session.messages.all().order_by('sequence_number')
         context['next_round'] = done_rounds + 1
         context['finished'] = done_rounds >= session.rounds
+        
+        context['topics_data'] = [
+            {
+                'db_id': t.id,
+                'title': t.title,
+                'why': t.why,
+                'critic_comment': t.critic_comment,
+                'difficulty': t.get_difficulty_display(),
+                'score': float(t.score) if t.score is not None else None,
+                'is_pinned': t.is_pinned,
+                'round': t.round,
+            }
+            for t in GeneratedTopic.objects.filter(session=session).order_by('-is_pinned', 'round', '-score')
+        ]
+        
         return context
 
 

@@ -12,10 +12,13 @@
         </div>
         <div class="col-md-4 text-end">
             <button id="start-btn" class="btn-brutal btn-brutal-black"
-                    data-current-round="{{ next_round }}"
+                    data-next-round="{{ next_round }}"
                     data-stream-url="{% url 'topics:debate_stream' session.id %}"
-                    data-total-rounds="{{ session.rounds }}">
-                {% if finished %}ПОВТОРИТИ КОЛО {{ session.rounds }}{% else %}ПОЧАТИ КОЛО {{ next_round }}{% endif %}
+                    data-total-rounds="{{ session.rounds }}"
+                    data-pin-url-template="{% url 'topics:pin_topic' 0 %}"
+                    data-csrf="{{ csrf_token }}"
+                    {% if finished %}disabled{% endif %}>
+                {% if finished %}ДЕБАТИ ЗАВЕРШЕНО{% else %}ПОЧАТИ КОЛО {{ next_round }}{% endif %}
             </button>
             <div id="status-text" class="mt-2 fw-bold font-monospace text-uppercase text-danger">
                 {% if finished %}ЗАВЕРШЕНО{% else %}ОЧІКУВАННЯ{% endif %}
@@ -23,43 +26,57 @@
         </div>
     </div>
 
+    <div id="closed-bar" class="mb-2 font-monospace small"></div>
+
     <div class="row g-3 mb-3">
         <div class="col-md-4">
             <div class="agent-window" id="window-generator">
                 <div class="agent-window-header">
-                    <span>[GEN] ГЕНЕРАТОР</span>
-                    <span>
-                        <span id="status-generator" class="step-status text-muted me-2">ОЧІКУВАННЯ</span>
-                        <span class="expand-btn" onclick="toggleExpand('window-generator')">[Розгорнути]</span>
+                    <span class="window-title">[GEN] ГЕНЕРАТОР</span>
+                    <span class="window-controls">
+                        <span class="step-status text-muted">ОЧІКУВАННЯ</span>
+                        <button type="button" class="win-btn" data-action="collapse" data-target="window-generator" title="Згорнути">[–]</button>
+                        <button type="button" class="win-btn" data-action="expand" data-target="window-generator" title="На весь екран">[⤢]</button>
+                        <button type="button" class="win-btn" data-action="close" data-target="window-generator" title="Закрити">[×]</button>
                     </span>
                 </div>
-                <div id="container-generator" class="agent-window-body" data-agent="generator"></div>
+                <div class="agent-window-body" data-agent="generator">
+                    {% for m in history %}{% if m.agent == 'generator' %}<div class="agent-msg">{{ m.content|linebreaksbr }}</div>{% endif %}{% endfor %}
+                </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="agent-window" id="window-critic">
                 <div class="agent-window-header">
-                    <span>[CRT] КРИТИК</span>
-                    <span>
-                        <span id="status-critic" class="step-status text-muted me-2">ОЧІКУВАННЯ</span>
-                        <span class="expand-btn" onclick="toggleExpand('window-critic')">[Розгорнути]</span>
+                    <span class="window-title">[CRT] КРИТИК</span>
+                    <span class="window-controls">
+                        <span class="step-status text-muted">ОЧІКУВАННЯ</span>
+                        <button type="button" class="win-btn" data-action="collapse" data-target="window-critic" title="Згорнути">[–]</button>
+                        <button type="button" class="win-btn" data-action="expand" data-target="window-critic" title="На весь екран">[⤢]</button>
+                        <button type="button" class="win-btn" data-action="close" data-target="window-critic" title="Закрити">[×]</button>
                     </span>
                 </div>
-                <div id="container-critic" class="agent-window-body" data-agent="critic"></div>
+                <div class="agent-window-body" data-agent="critic">
+                    {% for m in history %}{% if m.agent == 'critic' %}<div class="agent-msg">{{ m.content|linebreaksbr }}</div>{% endif %}{% endfor %}
+                </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="agent-window" id="window-judge">
                 <div class="agent-window-header">
-                    <span>[JDG] СУДДЯ</span>
-                    <span>
-                        <span id="status-judge" class="step-status text-muted me-2">ОЧІКУВАННЯ</span>
-                        <span class="expand-btn" onclick="toggleExpand('window-judge')">[Розгорнути]</span>
+                    <span class="window-title">[JDG] СУДДЯ</span>
+                    <span class="window-controls">
+                        <span class="step-status text-muted">ОЧІКУВАННЯ</span>
+                        <button type="button" class="win-btn" data-action="collapse" data-target="window-judge" title="Згорнути">[–]</button>
+                        <button type="button" class="win-btn" data-action="expand" data-target="window-judge" title="На весь екран">[⤢]</button>
+                        <button type="button" class="win-btn" data-action="close" data-target="window-judge" title="Закрити">[×]</button>
                     </span>
                 </div>
-                <div id="container-judge" class="agent-window-body" data-agent="judge"></div>
+                <div class="agent-window-body" data-agent="judge">
+                    {% for m in history %}{% if m.agent == 'judge' %}<div class="agent-msg">{{ m.content|linebreaksbr }}</div>{% endif %}{% endfor %}
+                </div>
             </div>
         </div>
     </div>
@@ -73,4 +90,10 @@
         </div>
     </div>
 </div>
+
+{{ topics_data|json_script:"topics-data" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/debate.js' %}"></script>
 {% endblock %}

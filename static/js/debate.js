@@ -1,153 +1,200 @@
-document.addEventListener("DOMContentLoaded", function() {
-    const btn = document.querySelector('#start-btn');
+(function () {
+    const btn = document.getElementById('start-btn');
     if (!btn) return;
+    const statusText = document.getElementById('status-text');
+    const panel = document.getElementById('results-panel');
+    const container = document.getElementById('topics-container');
+    const closedBar = document.getElementById('closed-bar');
+    const totalRounds = parseInt(btn.dataset.totalRounds, 10);
+    let source = null;
 
-    const statusEl = document.querySelector('#status-text');
-    const resultsPanel = document.querySelector('#results-panel');
-    const topicsContainer = document.querySelector('#topics-container');
-    
-    const STREAM_URL = btn.dataset.streamUrl;
-    const TOTAL_ROUNDS = parseInt(btn.dataset.totalRounds, 10);
-
-    window.toggleExpand = function(windowId) {
-        const win = document.querySelector('#' + windowId);
-        win.classList.toggle('expanded');
-        const isExpanded = win.classList.contains('expanded');
-        const btnSpan = win.querySelector('.expand-btn');
-        btnSpan.textContent = isExpanded ? '[Згорнути]' : '[Розгорнути]';
+    /* ---------- вікна агентів ---------- */
+    const WINDOWS = {
+        'window-generator': 'ГЕНЕРАТОР',
+        'window-critic': 'КРИТИК',
+        'window-judge': 'СУДДЯ'
     };
+    const STORE_KEY = 'debate-windows-state';
 
-    function updateStepper(activeAgent) {
-        document.querySelectorAll('.agent-window').forEach(win => {
-            const agent = win.querySelector('.agent-window-body').dataset.agent;
-            const statusSpan = win.querySelector('.step-status');
-            
-            if (agent === activeAgent) {
-                statusSpan.textContent = 'В ПРОЦЕСІ...';
-                statusSpan.classList.add('step-active');
-                statusSpan.classList.remove('text-muted');
-            } else {
-                statusSpan.classList.remove('step-active');
-                statusSpan.classList.add('text-muted');
-                if (statusSpan.textContent === 'В ПРОЦЕСІ...') {
-                    statusSpan.textContent = 'ГОТОВО';
-                }
-            }
+    function loadState() {
+        try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+        catch (e) { return {}; }
+    }
+    function saveState(s) {
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+        catch (e) { /* сховище недоступне */ }
+    }
+    const state = loadState();
+
+    function renderClosedBar() {
+        if (!closedBar) return;
+        closedBar.textContent = '';
+        Object.keys(WINDOWS).forEach(function (id) {
+            if (!(state[id] && state[id].closed)) return;
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'win-btn me-2';
+            b.textContent = '[+ ' + WINDOWS[id] + ']';
+            b.addEventListener('click', function () {
+                state[id] = { collapsed: false, closed: false };
+                saveState(state);
+                applyWindow(id);
+            });
+            closedBar.appendChild(b);
         });
     }
 
-    function appendMsg(agent, provider, text) {
-        const box = document.querySelector(`.agent-window-body[data-agent="${agent}"]`);
-        if (!box) return;
-        
-        const empty = box.querySelector('.empty-placeholder');
-        if (empty) empty.remove();
+    function applyWindow(id) {
+        const win = document.getElementById(id);
+        if (!win) return;
+        const col = win.closest('[class*="col-"]');
+        const s = state[id] || {};
+        win.classList.toggle('collapsed', !!s.collapsed);
+        if (col) col.classList.toggle('d-none', !!s.closed);
+        const c = win.querySelector('[data-action="collapse"]');
+        if (c) c.textContent = s.collapsed ? '[+]' : '[–]';
+        renderClosedBar();
+    }
 
+    document.querySelectorAll('.win-btn[data-target]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            const id = b.dataset.target;
+            const win = document.getElementById(id);
+            const s = state[id] || { collapsed: false, closed: false };
+            if (b.dataset.action === 'collapse') {
+                s.collapsed = !s.collapsed;
+            } else if (b.dataset.action === 'close') {
+                s.closed = true;
+            } else if (b.dataset.action === 'expand') {
+                const open = win.classList.toggle('expanded');
+                b.textContent = open ? '[⤡]' : '[⤢]';
+                return;
+            }
+            state[id] = s;
+            saveState(state);
+            applyWindow(id);
+        });
+    });
+    Object.keys(WINDOWS).forEach(applyWindow);
+
+    /* ---------- діалог ---------- */
+    function bodyOf(agent) {
+        return document.querySelector('.agent-window-body[data-agent="' + agent + '"]');
+    }
+    function setStep(agent, text) {
+        const el = document.querySelector('#window-' + agent + ' .step-status');
+        if (el) el.textContent = text;
+    }
+    function addMessage(agent, text) {
+        const body = bodyOf(agent);
+        if (!body) return;
         const div = document.createElement('div');
-        div.className = 'msg-line';
-        div.innerHTML = `<div class="fw-bold text-muted mb-1">> ${provider.toUpperCase()}</div>
-                         <div style="white-space: pre-wrap;">${text}</div>`;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
+        div.className = 'agent-msg';
+        div.style.whiteSpace = 'pre-wrap';
+        div.textContent = text;
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
     }
 
-    function renderResults(topics) {
-        resultsPanel.classList.add('active');
-        topicsContainer.innerHTML = '';
-        
-        const sorted = topics.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-        sorted.forEach(t => {
-            const div = document.createElement('div');
-            div.className = 'col-md-6';
-            div.innerHTML = `
-                <div class="p-3 border border-dark bg-white d-flex align-items-center">
-                    <div class="me-3 text-center border-end border-dark pe-3">
-                        <div class="score-badge">${t.score !== null ? t.score : '-'}</div>
-                        <small class="text-muted">/10</small>
-                    </div>
-                    <div>
-                        <h5 class="fw-bold mb-1">${t.title}</h5>
-                        <div class="text-muted small mb-2">${t.why || ''}</div>
-                        ${t.critic_comment ? `<div class="text-danger small font-monospace border-top border-danger pt-1">КРИТИК: ${t.critic_comment}</div>` : ''}
-                    </div>
-                </div>
-            `;
-            topicsContainer.appendChild(div);
-        });
+    /* ---------- картки тем ---------- */
+    function renderTopic(t) {
+        const col = document.createElement('div');
+        col.className = 'col-md-6';
+        const card = document.createElement('div');
+        card.className = 'agent-window p-3';
+
+        const h = document.createElement('h5');
+        h.className = 'fw-bold';
+        h.textContent = t.title;
+        const meta = document.createElement('div');
+        meta.className = 'small font-monospace mb-2';
+        meta.textContent = 'КОЛО ' + (t.round || '') + ' · ' + t.difficulty +
+            ' · ОЦІНКА: ' + (t.score !== null && t.score !== undefined ? t.score + '/10' : '—');
+        const why = document.createElement('p');
+        why.textContent = t.why;
+        const crit = document.createElement('p');
+        crit.className = 'small text-muted';
+        crit.textContent = 'Критик: ' + (t.critic_comment || '—');
+
+        const pin = document.createElement('button');
+        pin.className = 'btn-brutal';
+        pin.textContent = t.is_pinned ? 'ЗАКРІПЛЕНО' : 'ЗАКРІПИТИ';
+        pin.disabled = !!t.is_pinned;
+        pin.addEventListener('click', function () { pinTopic(t.db_id, pin, col); });
+
+        card.append(h, meta, why, crit, pin);
+        col.appendChild(card);
+        container.appendChild(col);
     }
 
-    function startDebate(roundNo) {
+    function pinTopic(id, button, col) {
+        const url = btn.dataset.pinUrlTemplate.replace('/0/', '/' + id + '/');
+        fetch(url, { method: 'POST', headers: { 'X-CSRFToken': btn.dataset.csrf } })
+            .then(function (r) {
+                if (!r.ok || r.redirected) throw new Error(r.status);
+                button.textContent = 'ЗАКРІПЛЕНО';
+                button.disabled = true;
+                container.prepend(col);
+            })
+            .catch(function () { button.textContent = 'ПОМИЛКА, СПРОБУЙ ЩЕ'; });
+    }
+
+    function showPanel() { panel.classList.add('active'); }
+
+    function finishRound(round) {
+        if (round >= totalRounds) {
+            btn.disabled = true;
+            btn.textContent = 'ДЕБАТИ ЗАВЕРШЕНО';
+            statusText.textContent = 'ЗАВЕРШЕНО';
+        } else {
+            btn.disabled = false;
+            btn.dataset.nextRound = round + 1;
+            btn.textContent = 'ПОЧАТИ КОЛО ' + (round + 1);
+            statusText.textContent = 'КОЛО ' + round + ' ГОТОВЕ';
+        }
+    }
+
+    /* ---------- потік SSE ---------- */
+    function start() {
+        const round = parseInt(btn.dataset.nextRound, 10);
+        if (Number.isNaN(round)) {
+            statusText.textContent = 'ПОМИЛКА: НЕ ВИЗНАЧЕНО НОМЕР КОЛА. ОНОВІТЬ СТОРІНКУ';
+            return;
+        }
         btn.disabled = true;
-        btn.textContent = 'З\u2019ЄДНАННЯ...';
-        statusEl.textContent = 'З\u2019ЄДНАННЯ...';
-        statusEl.className = 'mt-2 fw-bold font-monospace text-uppercase text-primary';
-        
-        document.querySelectorAll('.agent-window-body').forEach(box => {
-            box.innerHTML = '<div class="empty-placeholder text-muted text-center mt-5">ОЧІКУВАННЯ...</div>';
+        Object.keys(WINDOWS).forEach(function (id) {
+            setStep(id.replace('window-', ''), 'ОЧІКУВАННЯ');
         });
-        document.querySelectorAll('.step-status').forEach(span => {
-            span.textContent = 'ОЧІКУВАННЯ';
-            span.classList.remove('step-active');
-            span.classList.add('text-muted');
-        });
-        resultsPanel.classList.remove('active');
+        source = new EventSource(btn.dataset.streamUrl + '?round=' + round);
 
-        const source = new EventSource(STREAM_URL + '?round=' + roundNo);
-        let finished = false;
-
-        source.onmessage = (event) => {
-            let data;
-            try { data = JSON.parse(event.data); } catch (e) { return; }
-
-            if (data.type === 'status') {
-                statusEl.textContent = data.text.toUpperCase();
-                if (data.text.includes('Генератор')) updateStepper('generator');
-                else if (data.text.includes('Критик')) updateStepper('critic');
-                else if (data.text.includes('Суддя')) updateStepper('judge');
-
-            } else if (data.type === 'agent') {
-                appendMsg(data.agent, data.provider, data.text);
-
-            } else if (data.type === 'round_done') {
-                finished = true;
+        source.onmessage = function (e) {
+            const d = JSON.parse(e.data);
+            if (d.type === 'status') {
+                statusText.textContent = d.text;
+            } else if (d.type === 'agent') {
+                addMessage(d.agent, d.text);
+                setStep(d.agent, 'ГОТОВО (' + d.provider + ')');
+            } else if (d.type === 'round_done') {
                 source.close();
-                statusEl.textContent = 'КОЛО ' + data.round + ' ЗАВЕРШЕНО';
-                statusEl.className = 'mt-2 fw-bold font-monospace text-uppercase text-success';
-                renderResults(data.topics);
-
-                if (data.round < TOTAL_ROUNDS) {
-                    btn.disabled = false;
-                    btn.textContent = 'ПОЧАТИ КОЛО ' + (data.round + 1);
-                    btn.onclick = () => startDebate(data.round + 1);
-                } else {
-                    btn.disabled = false;
-                    btn.textContent = 'ПОВТОРИТИ КОЛО ' + data.round;
-                    btn.onclick = () => startDebate(data.round);
-                }
-
-            } else if (data.type === 'error') {
-                finished = true;
+                d.topics.forEach(function (t) { t.round = d.round; renderTopic(t); });
+                showPanel();
+                finishRound(d.round);
+            } else if (d.type === 'error') {
                 source.close();
-                statusEl.textContent = 'ПОМИЛКА: ' + data.text;
-                statusEl.className = 'mt-2 fw-bold font-monospace text-uppercase text-danger';
-                updateStepper(null);
+                statusText.textContent = 'ПОМИЛКА: ' + d.text;
                 btn.disabled = false;
-                btn.textContent = 'СПРОБУВАТИ ЩЕ РАЗ';
-                btn.onclick = () => startDebate(roundNo);
             }
         };
-
-        source.onerror = () => {
+        source.onerror = function () {
             source.close();
-            if (finished) return;
-            statusEl.textContent = 'ПОМИЛКА З\u2019ЄДНАННЯ';
-            statusEl.className = 'mt-2 fw-bold font-monospace text-uppercase text-danger';
-            updateStepper(null);
+            statusText.textContent = 'З\u2019ЄДНАННЯ ПЕРЕРВАНО. ОНОВІТЬ СТОРІНКУ';
             btn.disabled = false;
-            btn.textContent = 'СПРОБУВАТИ ЩЕ РАЗ';
-            btn.onclick = () => startDebate(roundNo);
         };
     }
 
-    btn.onclick = () => startDebate(parseInt(btn.dataset.currentRound));
-});
+    btn.addEventListener('click', start);
+
+    const dataEl = document.getElementById('topics-data');
+    const saved = dataEl ? JSON.parse(dataEl.textContent) : [];
+    if (saved.length) { saved.forEach(renderTopic); showPanel(); }
+})();

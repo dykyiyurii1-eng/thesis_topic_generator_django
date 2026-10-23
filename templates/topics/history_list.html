@@ -1,44 +1,84 @@
 {% extends 'base.html' %}
-{% block content %}
 {% load static %}
-<link rel="stylesheet" href="{% static 'css/brytal_style.css' %}">
-<h1 class="h3 mb-3">Моя історія</h1>
 
-<form method="get" class="mb-3 d-flex gap-2">
-  <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Пошук за спеціальністю або інтересом">
-  <button class="btn btn-primary" type="submit">Знайти</button>
-</form>
+{% block title %}Історія · THESIS_GEN{% endblock %}
 
-{% for s in sessions %}
-  <div class="card mb-2">
-    <div class="card-body d-flex justify-content-between align-items-center">
-      <div>
-        <a href="{{ s.get_absolute_url }}" class="fw-bold">{{ s.specialty }}</a>
-        <div class="text-muted small">
-          {{ s.created_at|date:"d.m.Y H:i" }} · {{ s.get_work_type_display }} ·
-          кіл: {{ s.rounds }} · тем: {{ s.topics_count }} · {{ s.get_status_display }}
+{% block content %}
+<div class="container py-4">
+    
+    <div class="row mb-4 align-items-end">
+        <div class="col-md-8">
+            <span class="tech-index">SYS.HIST // LOGS</span>
+            <h1 class="display-5 mt-3 mb-0">МОЯ ІСТОРІЯ</h1>
         </div>
-      </div>
-      {% if s.status == 'running' %}
-        <a href="{% url 'topics:debate_page' s.id %}" class="btn btn-sm btn-outline-primary">Продовжити</a>
-      {% endif %}
+        <div class="col-md-4">
+            <form method="get" class="d-flex gap-2">
+                <input type="text" name="q" value="{{ q }}" class="form-control rounded-0 border-dark font-monospace" placeholder="Пошук за спеціальністю...">
+                <button type="submit" class="btn-brutal btn-brutal-black py-2">ЗНАЙТИ</button>
+            </form>
+        </div>
     </div>
-  </div>
-{% empty %}
-  <p class="text-muted">Сесій поки немає. <a href="{% url 'topics:generate' %}">Створити першу</a></p>
-{% endfor %}
 
-{% if is_paginated %}
-  <nav>
-    <ul class="pagination">
-      {% if page_obj.has_previous %}
-        <li class="page-item"><a class="page-link" href="?q={{ q|urlencode }}&page={{ page_obj.previous_page_number }}">‹</a></li>
-      {% endif %}
-      <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ paginator.num_pages }}</span></li>
-      {% if page_obj.has_next %}
-        <li class="page-item"><a class="page-link" href="?q={{ q|urlencode }}&page={{ page_obj.next_page_number }}">›</a></li>
-      {% endif %}
-    </ul>
-  </nav>
-{% endif %}
+    <div class="separator"></div>
+
+    {% for session in sessions %}
+        <div class="card-brutal mb-3 p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h3 class="fs-4 fw-bold mb-2">
+                    <a href="{% url 'topics:debate_page' session.id %}" class="text-dark text-decoration-none border-bottom border-dark pb-1">
+                        {{ session.specialty }}
+                    </a>
+                </h3>
+                <div class="small text-muted font-monospace mb-2">
+                    <span class="me-3">{{ session.created_at|date:"d.m.Y H:i" }}</span>
+                    <span class="me-3">|</span>
+                    <span class="me-3">{{ session.get_institution_type_display }}</span>
+                    <span class="me-3">|</span>
+                    <span class="me-3">КІЛ: {{ session.rounds }}</span>
+                    <span class="me-3">|</span>
+                    <span class="me-3">ТЕМ: {{ session.topics_count }}</span>
+                </div>
+                <div>
+                    {% if session.status == 'done' %}
+                        <span class="badge bg-success rounded-0 border border-dark">ЗАВЕРШЕНО</span>
+                    {% elif session.status == 'error' %}
+                        <span class="badge bg-danger rounded-0 border border-dark">ПОМИЛКА</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark rounded-0 border border-dark">В ПРОЦЕСІ</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <a href="{% url 'topics:debate_page' session.id %}" class="btn-brutal text-center py-2 px-3">
+                    ПРОДОВЖИТИ
+                </a>
+                <a href="{% url 'topics:session_detail' session.id %}" class="btn-brutal text-center py-2 px-3">
+                    ДЕТАЛІ
+                </a>
+            </div>
+        </div>
+    {% empty %}
+        <div class="card-brutal text-center py-5">
+            <h3 class="text-muted font-monospace mb-3">ІСТОРІЯ ПОРОЖНЯ</h3>
+            <p class="mb-4">Ви ще не створювали жодної генерації.</p>
+            <a href="{% url 'topics:generate' %}" class="btn-brutal btn-brutal-black">СТВОРИТИ ПЕРШУ СЕСІЮ</a>
+        </div>
+    {% endfor %}
+
+    {% if is_paginated %}
+        <div class="d-flex justify-content-center gap-2 mt-4 font-monospace">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}" class="btn-brutal py-1 px-3">НАЗАД</a>
+            {% endif %}
+            
+            <span class="btn-brutal py-1 px-3 disabled">СТОР. {{ page_obj.number }} З {{ page_obj.paginator.num_pages }}</span>
+            
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}" class="btn-brutal py-1 px-3">ВПЕРЕД</a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+</div>
 {% endblock %}
