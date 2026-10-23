@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
+from django.contrib.auth.views import LoginView
 from .forms import RegistrationForm
 
 def register_view(request):
@@ -11,4 +12,12 @@ def register_view(request):
             return redirect('topics:home')
     else:
         form = RegistrationForm()
-    return render(request, 'accounts/register.html', {'form': form})
+    return render(request, 'accounts/auth.html', {'reg_form': form})
+
+class CustomLoginView(LoginView):
+    template_name = 'accounts/auth.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['reg_form'] = RegistrationForm()
+        return context

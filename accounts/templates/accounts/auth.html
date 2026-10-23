@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Авторизація · THESIS_GEN{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card-brutal p-4">
+            <span class="tech-index">AUTH // ACCESS</span>
+            
+            <ul class="nav nav-tabs mb-4 border-dark" id="authTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active font-monospace fw-bold text-dark border-dark" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab">ВХІД</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link font-monospace fw-bold text-dark border-dark" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button" role="tab">РЕЄСТРАЦІЯ</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="authTabsContent">
+                <div class="tab-pane fade show active" id="login" role="tabpanel">
+                    <h4 class="mb-3">ВХІД ДО СИСТЕМИ</h4>
+                    {% if form.errors %}
+                        <div class="alert alert-danger rounded-0 border-dark">НЕПРАВИЛЬНИЙ ЛОГІН АБО ПАРОЛЬ</div>
+                    {% endif %}
+                    <form method="post" action="{% url 'accounts:login' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ІМ'Я КОРИСТУВАЧА</label>
+                            <input type="text" name="username" class="form-control rounded-0 border-dark" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">ПАРОЛЬ</label>
+                            <div class="input-group">
+                                <input type="password" name="password" id="login_password" class="form-control rounded-0 border-dark" required>
+                                <button class="btn btn-outline-dark rounded-0 border-dark toggle-password" type="button" data-target="login_password">ПОКАЗАТИ</button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-brutal btn-brutal-black w-100">УВІЙТИ</button>
+                    </form>
+                </div>
+
+                <div class="tab-pane fade" id="register" role="tabpanel">
+                    <h4 class="mb-3">СТВОРЕННЯ АКАУНТУ</h4>
+                    <form method="post" action="{% url 'accounts:register' %}" id="register-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ІМ'Я КОРИСТУВАЧА</label>
+                            <input type="text" name="username" class="form-control rounded-0 border-dark" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">EMAIL</label>
+                            <input type="email" name="email" class="form-control rounded-0 border-dark" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ПАРОЛЬ</label>
+                            <div class="input-group">
+                                <input type="password" name="password1" id="id_password1" class="form-control rounded-0 border-dark" required>
+                                <button class="btn btn-outline-dark rounded-0 border-dark toggle-password" type="button" data-target="id_password1">ПОКАЗАТИ</button>
+                            </div>
+                            
+                            <div class="small font-monospace mt-2" id="password-requirements">
+                                <div id="req-length" class="text-muted">[-] Мінімум 8 символів</div>
+                                <div id="req-number" class="text-muted">[-] Містить цифри</div>
+                                <div id="req-special" class="text-muted">[-] Містить спецсимвол (!@#$%^&*)</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">ПІДТВЕРДЖЕННЯ ПАРОЛЯ</label>
+                            <div class="input-group">
+                                <input type="password" name="password2" id="id_password2" class="form-control rounded-0 border-dark" required>
+                                <button class="btn btn-outline-dark rounded-0 border-dark toggle-password" type="button" data-target="id_password2">ПОКАЗАТИ</button>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn-brutal btn-brutal-black w-100 mt-3">ЗАРЕЄСТРУВАТИСЯ</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.toggle-password').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const targetId = this.getAttribute('data-target');
+        const input = document.querySelector('#' + targetId);
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            this.textContent = 'ПРИХОВАТИ';
+        } else {
+            input.type = 'password';
+            this.textContent = 'ПОКАЗАТИ';
+        }
+    });
+});
+
+document.querySelector('#id_password1').addEventListener('input', function() {
+    const val = this.value;
+    
+    const reqLength = document.querySelector('#req-length');
+    if (val.length >= 8) {
+        reqLength.textContent = '[+] Мінімум 8 символів';
+        reqLength.className = 'text-success fw-bold';
+    } else {
+        reqLength.textContent = '[-] Мінімум 8 символів';
+        reqLength.className = 'text-muted';
+    }
+
+    const reqNumber = document.querySelector('#req-number');
+    if (val.length > 0 && /\d/.test(val)) {
+        reqNumber.textContent = '[+] Містить цифри';
+        reqNumber.className = 'text-success fw-bold';
+    } else {
+        reqNumber.textContent = '[-] Містить цифри';
+        reqNumber.className = 'text-muted';
+    }
+
+    const reqSpecial = document.querySelector('#req-special');
+    if (val.length > 0 && /[!@#$%^&*(),.?":{}|<>]/.test(val)) {
+        reqSpecial.textContent = '[+] Містить спецсимвол (!@#$%^&*)';
+        reqSpecial.className = 'text-success fw-bold';
+    } else {
+        reqSpecial.textContent = '[-] Містить спецсимвол (!@#$%^&*)';
+        reqSpecial.className = 'text-muted';
+    }
+});
+</script>
+{% endblock %}
