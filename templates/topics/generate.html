@@ -1,156 +1,182 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Створення генерації{% endblock %}
+{% block title %}Створення генерації · THESIS_GEN{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-<style>
-    .autocomplete-items {
-        position: absolute;
-        border: 1px solid #d4d4d4;
-        border-bottom: none;
-        border-top: none;
-        z-index: 99;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background-color: #fff;
-        max-height: 200px;
-        overflow-y: auto;
-        border-radius: 0 0 5px 5px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .autocomplete-item {
-        padding: 10px;
-        cursor: pointer;
-        background-color: #fff;
-        border-bottom: 1px solid #d4d4d4;
-    }
-    .autocomplete-item:hover { background-color: #e9ecef; }
-    .autocomplete { position: relative; display: inline-block; width: 100%; }
-    .help-icon { color: #6c757d; cursor: help; margin-left: 5px; font-size: 1.1rem; }
-</style>
+<div class="row justify-content-center mt-4">
+    <div class="col-md-10 col-lg-8">
+        <div class="card-brutal p-4">
+            <span class="tech-index">SYS.GEN // FORM</span>
+            <h2 class="mb-4">СТВОРЕННЯ НОВОЇ ГЕНЕРАЦІЇ</h2>
 
-<div class="container mt-5">
-    <h1 class="mb-4">Створення нової генерації тем</h1>
-    
-    <form method="post" class="card p-4 shadow-sm">
-        {% csrf_token %}
-        
-        <div class="mb-3 autocomplete">
-            <label class="form-label">
-                Спеціальність 
-                <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Введіть назву вашої спеціальності. Можна обрати з підказок або ввести свій варіант."></i>
-            </label>
-            <input type="text" id="specialty_input" name="specialty" class="form-control" placeholder="Почніть вводити назву (наприклад: Інформатика)" autocomplete="off">
-            <div id="autocomplete-list" class="autocomplete-items" style="display: none;"></div>
+            {% if form.errors %}
+                <div class="alert alert-danger rounded-0 border-dark">
+                    {% for field, errs in form.errors.items %}
+                        {% for e in errs %}<div>{{ e }}</div>{% endfor %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" id="gen-form">
+                {% csrf_token %}
+                
+                <!-- Спеціальність -->
+                <div class="mb-3 autocomplete">
+                    <label class="form-label fw-bold font-monospace">СПЕЦІАЛЬНІСТЬ</label>
+                    <input type="text" id="specialty_input" name="specialty" class="form-control rounded-0 border-dark font-monospace" placeholder="Почніть вводити назву..." autocomplete="off" required value="{{ form.specialty.value|default:'' }}">
+                    <div id="autocomplete-list" class="autocomplete-items"></div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold font-monospace">ТИП ЗАКЛАДУ</label>
+                        {{ form.institution_type }}
+                    </div>
+                    <div class="col-md-6 mb-3" id="level-field-container">
+                        <label class="form-label fw-bold font-monospace">РІВЕНЬ ОСВІТИ</label>
+                        {{ form.level }}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold font-monospace">ТИП РОБОТИ</label>
+                        {{ form.work_type }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold font-monospace">КІЛЬКІСТЬ КІЛ</label>
+                        {{ form.rounds }}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold font-monospace d-block mb-2">ІНТЕРЕСИ</label>
+                    
+                    <input type="text" id="interest-filter" class="form-control form-control-sm mb-2 rounded-0 border-dark font-monospace" placeholder="Фільтр по списку...">
+                    
+                    <div id="interest-chips" class="d-flex flex-wrap gap-2 border border-dark p-3" style="max-height: 200px; overflow-y: auto; background: #fafafa;">
+                        {% for cb in form.interests %}
+                            <span class="interest-chip" data-name="{{ cb.choice_label|lower }}">
+                                <input type="checkbox" class="btn-check" name="{{ cb.data.name }}" id="{{ cb.id_for_label }}" value="{{ cb.data.value }}" {% if cb.data.selected %}checked{% endif %}>
+                                <label class="btn btn-outline-dark btn-sm rounded-0 font-monospace" for="{{ cb.id_for_label }}">{{ cb.choice_label }}</label>
+                            </span>
+                        {% endfor %}
+                    </div>
+
+                    <label class="form-label fw-bold font-monospace mt-3" for="custom-input">СВОЇ ІНТЕРЕСИ (до 5)</label>
+                    <div class="input-group">
+                        <input type="text" id="custom-input" class="form-control rounded-0 border-dark font-monospace" maxlength="40" placeholder="Напишіть і натисніть Enter">
+                        <button type="button" id="custom-add" class="btn btn-dark rounded-0 font-monospace">ДОДАТИ</button>
+                    </div>
+                    <div id="custom-chips" class="d-flex flex-wrap gap-2 mt-2"></div>
+                    <input type="hidden" name="custom_interests" id="id_custom_interests" value="">
+                </div>
+
+                <button type="submit" class="btn-brutal btn-brutal-black w-100 py-3 mt-2">СТВОРИТИ СЕСІЮ</button>
+            </form>
         </div>
-        
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">
-                    Тип закладу
-                    <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Оберіть, де ви навчаєтесь. Для школи та коледжу рівень (бакалавр/магістр) не потрібен."></i>
-                </label>
-                {{ form.institution_type }}
-            </div>
-            <div class="col-md-6 mb-3" id="level-field-container">
-                <label class="form-label">
-                    Рівень освіти
-                    <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Актуально лише для університету. Оберіть бакалавра або магістра."></i>
-                </label>
-                {{ form.level }}
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">
-                    Тип роботи
-                    <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Практична — створення продукту/додатку. Теоретична — дослідження. Змішана — і те, і інше."></i>
-                </label>
-                {{ form.work_type }}
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label">
-                    Кількість кіл дебатів
-                    <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Скільки разів Генератор і Критик будуть сперечатися. 1 коло — швидко, 3 кола — найкращий результат."></i>
-                </label>
-                {{ form.rounds }}
-            </div>
-        </div>
-        
-        <div class="mb-4">
-            <label class="form-label d-block mb-2">
-                Інтереси
-                <i class="bi bi-question-circle help-icon" data-bs-toggle="tooltip" data-bs-title="Оберіть теми, які вам цікаві. Генератор врахує їх при створенні тем."></i>
-            </label>
-            <div class="border p-3 rounded" style="max-height: 200px; overflow-y: auto;">
-                {{ form.interests }}
-            </div>
-        </div>
-        
-        <button type="submit" class="btn btn-primary btn-lg w-100">Створити сесію та почати дебати</button>
-    </form>
+    </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-       
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        })
-
-        const institutionSelect = document.querySelector("#id_institution_type");
-        const levelContainer = document.querySelector("#level-field-container");
-        const specialtyInput = document.querySelector("#specialty_input");
-        const autocompleteList = document.querySelector("#autocomplete-list");
-
-        function toggleLevelField() {
-            if (institutionSelect.value === 'school' || institutionSelect.value === 'college') {
-                levelContainer.style.display = 'none';
-            } else {
-                levelContainer.style.display = 'block';
-            }
+document.addEventListener("DOMContentLoaded", function() {
+    const institutionSelect = document.querySelector("#id_institution_type");
+    const levelContainer = document.querySelector("#level-field-container");
+    const specialtyInput = document.querySelector("#specialty_input");
+    const autocompleteList = document.querySelector("#autocomplete-list");
+    
+    function toggleLevelField() {
+        if (institutionSelect.value === 'school' || institutionSelect.value === 'college') {
+            levelContainer.style.display = 'none';
+        } else {
+            levelContainer.style.display = 'block';
         }
-        institutionSelect.addEventListener("change", toggleLevelField);
-        toggleLevelField();
+    }
+    institutionSelect.addEventListener("change", toggleLevelField);
+    toggleLevelField();
 
-        specialtyInput.addEventListener("input", function() {
-            let query = this.value;
-            if (query.length < 2) {
-                autocompleteList.style.display = "none";
-                return;
-            }
-
-            fetch(`/interests/suggest/?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(data => {
-                    autocompleteList.innerHTML = "";
-                    if (data.results.length > 0) {
-                        autocompleteList.style.display = "block";
-                        data.results.forEach(item => {
-                            let div = document.createElement("div");
-                            div.className = "autocomplete-item";
-                            div.innerText = item.text;
-                            div.addEventListener("click", function() {
-                                specialtyInput.value = item.text;
-                                autocompleteList.style.display = "none";
-                            });
-                            autocompleteList.appendChild(div);
+    specialtyInput.addEventListener("input", function() {
+        let query = this.value;
+        if (query.length < 2) {
+            autocompleteList.style.display = "none";
+            return;
+        }
+        fetch(`/interests/suggest/?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                autocompleteList.innerHTML = "";
+                if (data.results.length > 0) {
+                    autocompleteList.style.display = "block";
+                    data.results.forEach(item => {
+                        let div = document.createElement("div");
+                        div.className = "autocomplete-item";
+                        div.innerText = item.text;
+                        div.addEventListener("click", function() {
+                            specialtyInput.value = item.text;
+                            autocompleteList.style.display = "none";
                         });
-                    } else {
-                        autocompleteList.style.display = "none";
-                    }
-                });
-        });
+                        autocompleteList.appendChild(div);
+                    });
+                } else {
+                    autocompleteList.style.display = "none";
+                }
+            });
+    });
 
-        document.addEventListener("click", function(e) {
-            if (e.target !== specialtyInput && e.target !== autocompleteList) {
-                autocompleteList.style.display = "none";
-            }
+    document.addEventListener("click", function(e) {
+        if (e.target !== specialtyInput && e.target !== autocompleteList) {
+            autocompleteList.style.display = "none";
+        }
+    });
+
+    const MAX_CUSTOM = 5;
+    const hiddenInput = document.querySelector('#id_custom_interests');
+    const customInput = document.querySelector('#custom-input');
+    const addBtn = document.querySelector('#custom-add');
+    const customChipsBox = document.querySelector('#custom-chips');
+    let items = hiddenInput.value ? hiddenInput.value.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+    function renderCustomChips() {
+        customChipsBox.innerHTML = '';
+        items.forEach((name, idx) => {
+            const chip = document.createElement('span');
+            chip.className = 'badge bg-dark rounded-0 p-2 font-monospace';
+            chip.textContent = name + ' ';
+            
+            const x = document.createElement('button');
+            x.type = 'button';
+            x.className = 'btn-close btn-close-white ms-1';
+            x.style.fontSize = '.6rem';
+            x.onclick = () => { items.splice(idx, 1); renderCustomChips(); };
+            
+            chip.appendChild(x);
+            customChipsBox.appendChild(chip);
+        });
+        hiddenInput.value = items.join(', ');
+        addBtn.disabled = items.length >= MAX_CUSTOM;
+    }
+
+    function addCustom() {
+        const name = customInput.value.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+        if (name.length < 2 || items.length >= MAX_CUSTOM) return;
+        if (!items.some(i => i.toLowerCase() === name.toLowerCase())) items.push(name);
+        customInput.value = '';
+        renderCustomChips();
+    }
+
+    addBtn.onclick = addCustom;
+    customInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } });
+    renderCustomChips();
+
+    document.querySelector('#interest-filter').addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        document.querySelectorAll('#interest-chips .interest-chip').forEach(el => {
+            el.style.display = el.dataset.name.includes(q) ? '' : 'none';
         });
     });
+});
 </script>
 {% endblock %}

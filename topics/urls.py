@@ -10,6 +10,7 @@ urlpatterns = [
     path('session/<int:session_id>/', views.DebatePageView.as_view(), name='debate_page'),
     path('session/<int:session_id>/stream/', views.debate_stream_view, name='debate_stream'),
         path('history/session/<int:pk>/', views.SessionDetailView.as_view(), name='session_detail'),
+        path('history/bulk-delete/', views.bulk_delete_sessions, name='bulk_delete_sessions'),
     path('topic/<int:topic_id>/pin/', views.pin_topic_view, name='pin_topic'),
     path('history/', views.SessionListView.as_view(), name='history'),
     path('history/<int:pk>/', views.SessionDetailView.as_view(), name='history_detail'),

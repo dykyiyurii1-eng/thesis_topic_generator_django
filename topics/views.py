@@ -102,8 +102,14 @@ def trial_generate_view(request):
             session = form.save(commit=False)
             session.guest_key = request.session.session_key
             session.status = 'running'
+            session.specialty = request.POST.get('specialty', '')
             session.save()
             form.save_m2m()
+            
+            custom_interests = request.POST.get('custom_interests', '')
+            if custom_interests:
+                request.session['guest_custom_interests'] = custom_interests
+                
             return redirect('topics:debate_page', session_id=session.id)
     else:
         form = GenerationSessionForm()
@@ -150,6 +156,8 @@ class SessionCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.student = self.request.user
         form.instance.status = 'running'
+        form.instance.specialty = self.request.POST.get('specialty', '')
+        form.instance.interests_text = self.request.POST.get('custom_interests', '')
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -242,3 +250,11 @@ class SessionDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_queryset(self):
         return GenerationSession.objects.filter(student=self.request.user)
+@login_required
+@require_POST
+def bulk_delete_sessions(request):
+    session_ids = request.POST.getlist('session_ids')
+    if session_ids:
+        GenerationSession.objects.filter(id__in=session_ids, student=request.user).delete()
+        messages.success(request, f'Видалено {len(session_ids)} сесій.')
+    return redirect('topics:history')
