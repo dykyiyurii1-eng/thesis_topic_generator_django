@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="{% static 'css/brytal_style.css' %}">
 </head>
 <body>
-        <nav class="navbar navbar-expand-lg border-bottom border-dark bg-white px-3 py-2">
+    <nav class="navbar navbar-expand-lg border-bottom border-dark bg-white px-3 py-2 sticky-top">
         <div class="container-fluid">
             <a class="brand-logo navbar-brand fs-3 mb-0" href="{% url 'topics:home' %}">THESIS_GEN *</a>
             
@@ -24,14 +24,17 @@
             </button>
             
             <div class="collapse navbar-collapse justify-content-end" id="mainNav">
-                <div class="navbar-nav gap-3 mt-3 mt-lg-0">
+                <div class="navbar-nav align-items-center gap-3 mt-3 mt-lg-0">
                     <a class="nav-link font-monospace fw-bold text-dark" href="{% url 'topics:home' %}">[ 01_HOME ]</a>
                     <a class="nav-link font-monospace fw-bold text-dark" href="{% url 'topics:quiz' %}">[ 02_TEST ]</a>
                     <a class="nav-link font-monospace fw-bold text-dark" href="{% url 'topics:history' %}">[ 03_HISTORY ]</a>
                     
                     {% if user.is_authenticated %}
-                        <span class="nav-link text-muted font-monospace">{{ user.username }}</span>
-                        <form action="{% url 'accounts:logout' %}" method="post" class="d-inline m-0">
+                        {% if user.is_staff %}
+                            <a class="nav-link font-monospace fw-bold text-danger" href="/admin/">[ АДМІНКА ]</a>
+                        {% endif %}
+                        <span class="nav-link text-muted font-monospace mb-0">{{ user.username }}</span>
+                        <form action="{% url 'accounts:logout' %}" method="post" class="d-flex m-0">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-link nav-link font-monospace fw-bold text-dark p-0">[ ВИЙТИ ]</button>
                         </form>

@@ -27,7 +27,7 @@
                     <form method="post" action="{% url 'accounts:login' %}">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label class="form-label fw-bold">ІМ'Я КОРИСТУВАЧА</label>
+                            <label class="form-label fw-bold">EMAIL АБО ЛОГІН</label>
                             <input type="text" name="username" class="form-control rounded-0 border-dark" required>
                         </div>
                         <div class="mb-4">
