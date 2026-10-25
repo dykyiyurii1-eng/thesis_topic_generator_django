@@ -246,6 +246,7 @@ html { scroll-behavior: smooth; }
     background: #000 !important;
     color: #fff !important;
 }
+
 @media (max-width: 768px) {
     .agent-window {
         height: 300px;
@@ -276,3 +277,5 @@ html { scroll-behavior: smooth; }
     .results-panel.active, #topics-container > * { animation: none; }
     .cursor::after { animation: none; }
 }
+
+html.invert { filter: invert(1); background: #fff; }

@@ -14,7 +14,7 @@
     
     <link rel="stylesheet" href="{% static 'css/brytal_style.css' %}">
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg border-bottom border-dark bg-white px-3 py-2 sticky-top">
         <div class="container-fluid">
             <a class="brand-logo navbar-brand fs-3 mb-0" href="{% url 'topics:home' %}">THESIS_GEN *</a>
@@ -31,9 +31,7 @@
                     
                     {% if user.is_authenticated %}
                         {% if user.is_staff %}
-                        {% if user.is_staff %}
-      <a class="nav-link font-monospace fw-bold text-danger" href="{% url 'topics:sandbox' %}">[ SANDBOX ]</a>
-        {% endif %}
+                            <a class="nav-link font-monospace fw-bold text-danger" href="{% url 'topics:sandbox' %}">[ SANDBOX ]</a>
                             <a class="nav-link font-monospace fw-bold text-danger" href="/admin/">[ АДМІНКА ]</a>
                         {% endif %}
                         <span class="nav-link text-muted font-monospace mb-0">{{ user.username }}</span>
@@ -44,12 +42,14 @@
                     {% else %}
                         <a class="nav-link font-monospace fw-bold text-dark" href="{% url 'accounts:login' %}">[ LOGIN ]</a>
                     {% endif %}
+                    
+                    <button id="theme-toggle" class="btn btn-link nav-link font-monospace fw-bold text-dark p-0" title="Змінити тему">[ ● ]</button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="container py-4">
+    <main class="container py-4 flex-grow-1">
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-info rounded-0 border-dark mb-4">{{ message }}</div>
@@ -59,8 +59,42 @@
         {% block content %} {% endblock %}
     </main>
 
+    <footer class="border-top border-dark py-4 mt-auto">
+        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <div class="small font-monospace text-uppercase text-center text-md-start">
+                &copy; 2026 THESIS_GEN. ПРАКТИЧНА РОБОТА. ГЕНЕРАТОР ТЕМ КВАЛІФІКАЦІЙНИХ РОБІТ.
+            </div>
+            <div class="small font-monospace text-uppercase text-center text-md-end">
+                АВТОР: <a href="https://github.com/dykyiyurii1-eng" target="_blank" class="text-dark border-bottom border-dark pb-1 text-decoration-none">GITHUB</a>
+            </div>
+        </div>
+    </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'js/animations.js' %}" defer></script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggle = document.querySelector('#theme-toggle');
+        const html = document.documentElement;
+        
+        if (localStorage.getItem('theme') === 'dark') {
+            html.classList.add('invert');
+        }
+        
+        if (toggle) {
+            toggle.addEventListener('click', function() {
+                html.classList.toggle('invert');
+                if (html.classList.contains('invert')) {
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    localStorage.setItem('theme', 'light');
+                }
+            });
+        }
+    });
+    </script>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>
