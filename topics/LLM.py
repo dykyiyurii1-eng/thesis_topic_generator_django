@@ -9,12 +9,10 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-
 class LLMError(Exception):
     def __init__(self, message, retry_after=None):
         super().__init__(message)
         self.retry_after = retry_after
-
 
 def _raise_for_status(response, name):
     if response.status_code == 200:
@@ -27,12 +25,13 @@ def _raise_for_status(response, name):
         raise LLMError(f"Перевищено ліміт запитів {name}.", retry_after=retry_after)
     raise LLMError(f"{name}: помилка {response.status_code}. {response.text[:300]}")
 
-
 def is_api_configured():
     return bool(os.getenv('GEMINI_API_KEY') or os.getenv('GROQ_API_KEY') or os.getenv('OPENROUTER_API_KEY'))
 
-
 def parse_json_response(raw):
+    if not raw or not raw.strip():
+        raise LLMError("ШІ повернув порожню відповідь. Спробуйте ще раз.")
+        
     raw = raw.strip()
     if raw.startswith('```json'):
         raw = raw[7:]
@@ -50,7 +49,6 @@ def parse_json_response(raw):
         return json.loads(raw)
     except json.JSONDecodeError as e:
         raise LLMError(f"Не вдалося розпізнати відповідь ШІ як JSON. Помилка: {e}")
-
 
 def call_gemini(system, user, temperature=0.7):
     api_key = os.getenv('GEMINI_API_KEY')
@@ -82,7 +80,6 @@ def call_gemini(system, user, temperature=0.7):
         return data['candidates'][0]['content']['parts'][0]['text']
     except (KeyError, IndexError):
         raise LLMError("Неочікуваний формат відповіді від Gemini.")
-
 
 def call_groq(system, user, temperature=0.4):
     api_key = os.getenv('GROQ_API_KEY')
@@ -118,7 +115,6 @@ def call_groq(system, user, temperature=0.4):
     except (KeyError, IndexError):
         raise LLMError("Неочікуваний формат відповіді від Groq.")
 
-
 def call_openrouter(system, user, temperature=0.7):
     api_key = os.getenv('OPENROUTER_API_KEY')
     model = os.getenv('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct:free')
@@ -152,7 +148,6 @@ def call_openrouter(system, user, temperature=0.7):
         return data['choices'][0]['message']['content']
     except (KeyError, IndexError):
         raise LLMError("Неочікуваний формат відповіді від OpenRouter.")
-
 
 def call_with_fallback(role, system, user):
     if role == 'generator':

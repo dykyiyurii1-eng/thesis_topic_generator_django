@@ -17,6 +17,10 @@ from .forms import GenerationSessionForm, EmailSendForm
 from .models import (Interest, Question, GenerationSession, GeneratedTopic,
                      AgentMessage, HomePageImage)
 from .services import process_quiz_results, run_debate_pipeline
+from django.contrib.admin.views.decorators import staff_member_required
+from .forms import GenerationSessionForm, EmailSendForm, SandboxForm
+from .llm import call_with_fallback, LLMError
+from .prompts import build_generator_input
 
 
 def sessions_for_request(request):
@@ -258,3 +262,42 @@ def bulk_delete_sessions(request):
         GenerationSession.objects.filter(id__in=session_ids, student=request.user).delete()
         messages.success(request, f'Видалено {len(session_ids)} сесій.')
     return redirect('topics:history')
+
+from django.http import JsonResponse
+
+@staff_member_required
+def sandbox_view(request):
+    if request.method == 'POST':
+        form = SandboxForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            ctx = {
+                'specialty': cd['specialty'],
+                'education': cd['education'],
+                'interests': [(i.strip(), 'high') for i in cd['interests'].split(',') if i.strip()],
+            }
+            
+            log = []
+            for n in range(1, cd['iterations'] + 1):
+                try:
+                    raw, provider = call_with_fallback(
+                        'generator', cd['system_prompt'], build_generator_input(ctx)
+                    )
+                    log.append({'n': n, 'provider': provider, 'raw': raw})
+                except LLMError as e:
+                    log.append({'n': n, 'error': str(e)})
+                    break
+            
+            # Якщо це AJAX-запит, повертаємо JSON
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'log': log})
+            
+            # Інакше повертаємо HTML (для сумісності)
+            return render(request, 'topics/sandbox.html', {'form': form, 'log': log})
+        else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'errors': form.errors}, status=400)
+    else:
+        form = SandboxForm()
+    
+    return render(request, 'topics/sandbox.html', {'form': form})

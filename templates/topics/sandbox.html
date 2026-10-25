@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Пісочниця ШІ · THESIS_GEN{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-5 fw-bold">ПІСОЧНИЦЯ ШІ</h1>
+            <p class="text-muted font-monospace">ТУТ МОЖНА ТЕСТУВАТИ ПРОМПТИ (ТІЛЬКИ ДЛЯ АДМІНА)</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card-brutal p-4">
+                <h3 class="fs-5 fw-bold mb-3">НАЛАШТУВАННЯ</h3>
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% for e in field.errors %}
+                                <div class="text-danger small">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="btn-brutal btn-brutal-black w-100">ЗАПУСТИТИ</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card-brutal p-0" style="height: 100%; min-height: 500px; display: flex; flex-direction: column;">
+                <div class="border-bottom border-dark p-3 d-flex justify-content-between bg-light">
+                    <span class="fw-bold font-monospace cursor">SANDBOX_LOG.txt</span>
+                    <span class="status-dot"></span>
+                </div>
+                <div class="p-3 font-monospace small" style="flex-grow: 1; overflow-y: auto; background: #fafafa;">
+                    {% for item in log %}
+                        <div class="mb-3 p-2 border border-dark bg-white">
+                            <div class="fw-bold text-muted mb-1">> ITERATION {{ item.n }} {% if item.provider %}({{ item.provider }}){% endif %}</div>
+                            {% if item.raw %}
+                                <div style="white-space: pre-wrap;">{{ item.raw }}</div>
+                            {% endif %}
+                            {% if item.error %}
+                                <div class="text-danger fw-bold mt-2">ERROR: {{ item.error }}</div>
+                            {% endif %}
+                        </div>
+                    {% empty %}
+                        <div class="text-center text-muted mt-5">СИСТЕМА ГОТОВА ДО ЗАПУСКУ</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.card-brutal form');
+    
+    if (form) {
+        form.addEventListener('submit', function() {
+            const btn = form.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'В ПРОЦЕСІ...';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
