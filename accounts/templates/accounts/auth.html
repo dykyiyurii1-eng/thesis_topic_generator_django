@@ -43,6 +43,17 @@
 
                 <div class="tab-pane fade" id="register" role="tabpanel">
                     <h4 class="mb-3">СТВОРЕННЯ АКАУНТУ</h4>
+                    
+                    {% if reg_form.errors %}
+                        <div class="alert alert-danger rounded-0 border-dark mb-3">
+                            {% for field, errors in reg_form.errors.items %}
+                                {% for error in errors %}
+                                    <div>{{ field }}: {{ error }}</div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
                     <form method="post" action="{% url 'accounts:register' %}" id="register-form">
                         {% csrf_token %}
                         <div class="mb-3">

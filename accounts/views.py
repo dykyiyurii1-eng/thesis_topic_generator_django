@@ -10,6 +10,8 @@ def register_view(request):
             user = form.save()
             login(request, user, backend='accounts.backends.EmailOrUsernameBackend')
             return redirect('topics:home')
+        else:
+            print(form.errors)
     else:
         form = RegistrationForm()
     return render(request, 'accounts/auth.html', {'reg_form': form})
