@@ -3,6 +3,7 @@ import os
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.admin.views.decorators import staff_member_required
 from django.core.mail import send_mail
 from django.db.models import Count, Q
 from django.http import JsonResponse, StreamingHttpResponse
@@ -13,12 +14,10 @@ from django.views.decorators.http import require_POST
 from django.views.generic import (ListView, DetailView, CreateView,
                                   UpdateView, DeleteView)
 
-from .forms import GenerationSessionForm, EmailSendForm
-from .models import (Interest, Question, GenerationSession, GeneratedTopic,
-                     AgentMessage, HomePageImage)
-from .services import process_quiz_results, run_debate_pipeline
-from django.contrib.admin.views.decorators import staff_member_required
 from .forms import GenerationSessionForm, EmailSendForm, SandboxForm
+from .models import (Interest, Question, GenerationSession, GeneratedTopic,
+                     AgentMessage, HomePageImage, StudentInterest)
+from .services import process_quiz_results, run_debate_pipeline
 from .llm import call_with_fallback, LLMError
 from .prompts import build_generator_input
 
@@ -51,11 +50,33 @@ def quiz_view(request):
     if request.method == 'POST':
         selected_options = request.POST.getlist('options')
         results = process_quiz_results(request.user, selected_options)
-        if not request.user.is_authenticated:
+        
+        if request.user.is_authenticated:
+            user_interests = StudentInterest.objects.filter(student=request.user, interest__in=results)
+            for interest in results:
+                si = user_interests.filter(interest=interest).first()
+                interest.is_default = si.is_default if si else False
+        else:
             request.session['guest_interests'] = [i.id for i in results]
-        return redirect('topics:home')
+            
+        return render(request, 'topics/quiz.html', {
+            'questions': Question.objects.prefetch_related('options').all(), 
+            'results': results
+        })
+        
     questions = Question.objects.prefetch_related('options').all()
     return render(request, 'topics/quiz.html', {'questions': questions})
+
+
+@login_required
+@require_POST
+def save_default_interests_view(request):
+    selected_ids = request.POST.getlist('default_interests')
+    StudentInterest.objects.filter(student=request.user).update(is_default=False)
+    if selected_ids:
+        StudentInterest.objects.filter(student=request.user, interest_id__in=selected_ids).update(is_default=True)
+    messages.success(request, 'Ваші інтереси за замовчуванням оновлено.')
+    return redirect('topics:home')
 
 
 def suggest_interests_view(request):
@@ -142,10 +163,65 @@ def send_session_email_view(request, session_id):
     return render(request, 'topics/email_form.html', {'form': form, 'session': session})
 
 
+@login_required
+@require_POST
+def bulk_delete_sessions(request):
+    session_ids = request.POST.getlist('session_ids')
+    if session_ids:
+        GenerationSession.objects.filter(id__in=session_ids, student=request.user).delete()
+        messages.success(request, f'Видалено {len(session_ids)} сесій.')
+    return redirect('topics:history')
+
+
+@staff_member_required
+def sandbox_view(request):
+    if request.method == 'POST':
+        form = SandboxForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            ctx = {
+                'specialty': cd['specialty'],
+                'education': cd['education'],
+                'interests': [(i.strip(), 'high') for i in cd['interests'].split(',') if i.strip()],
+            }
+            
+            log = []
+            for n in range(1, cd['iterations'] + 1):
+                try:
+                    raw, provider = call_with_fallback(
+                        'generator', cd['system_prompt'], build_generator_input(ctx)
+                    )
+                    log.append({'n': n, 'provider': provider, 'raw': raw})
+                except LLMError as e:
+                    log.append({'n': n, 'error': str(e)})
+                    break
+   
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'log': log})
+            
+            return render(request, 'topics/sandbox.html', {'form': form, 'log': log})
+        else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'errors': form.errors}, status=400)
+    else:
+        form = SandboxForm()
+    
+    return render(request, 'topics/sandbox.html', {'form': form})
+
+
 class SessionCreateView(LoginRequiredMixin, CreateView):
     model = GenerationSession
     form_class = GenerationSessionForm
     template_name = 'topics/generate.html'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        if self.request.user.is_authenticated:
+            default_interests = StudentInterest.objects.filter(
+                student=self.request.user, is_default=True
+            ).values_list('interest_id', flat=True)
+            initial['interests'] = default_interests
+        return initial
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated and not request.user.is_staff:
@@ -225,6 +301,8 @@ class SessionListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['q'] = self.request.GET.get('q', '').strip()
+        for session in context['sessions']:
+            session.pinned_topics = session.topics.filter(is_pinned=True)
         return context
 
 
@@ -254,50 +332,3 @@ class SessionDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_queryset(self):
         return GenerationSession.objects.filter(student=self.request.user)
-@login_required
-@require_POST
-def bulk_delete_sessions(request):
-    session_ids = request.POST.getlist('session_ids')
-    if session_ids:
-        GenerationSession.objects.filter(id__in=session_ids, student=request.user).delete()
-        messages.success(request, f'Видалено {len(session_ids)} сесій.')
-    return redirect('topics:history')
-
-from django.http import JsonResponse
-
-@staff_member_required
-def sandbox_view(request):
-    if request.method == 'POST':
-        form = SandboxForm(request.POST)
-        if form.is_valid():
-            cd = form.cleaned_data
-            ctx = {
-                'specialty': cd['specialty'],
-                'education': cd['education'],
-                'interests': [(i.strip(), 'high') for i in cd['interests'].split(',') if i.strip()],
-            }
-            
-            log = []
-            for n in range(1, cd['iterations'] + 1):
-                try:
-                    raw, provider = call_with_fallback(
-                        'generator', cd['system_prompt'], build_generator_input(ctx)
-                    )
-                    log.append({'n': n, 'provider': provider, 'raw': raw})
-                except LLMError as e:
-                    log.append({'n': n, 'error': str(e)})
-                    break
-            
-            # Якщо це AJAX-запит, повертаємо JSON
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'log': log})
-            
-            # Інакше повертаємо HTML (для сумісності)
-            return render(request, 'topics/sandbox.html', {'form': form, 'log': log})
-        else:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'errors': form.errors}, status=400)
-    else:
-        form = SandboxForm()
-    
-    return render(request, 'topics/sandbox.html', {'form': form})

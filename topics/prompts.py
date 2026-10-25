@@ -33,11 +33,27 @@ JUDGE_SYSTEM = """Ти — незалежний суддя. Оціни теми 
 
 def build_generator_input(ctx):
     specialty = ctx.get('specialty', '')
-    education = ctx.get('education', 'bachelor')
-    interests_list = ctx.get('interests', [])
-    interests = ", ".join([i[0] for i in interests_list]) if interests_list else "не вказано"
+    industry = ctx.get('industry', '')
+    education = ctx.get('education', '')
+    interests = ", ".join([i[0] for i in ctx.get('interests', [])])
+    work_type = ctx.get('work_type', '')
+    has_real_object = "Так" if ctx.get('has_real_object') else "Ні"
+    methods = ctx.get('methods', '')
+    complexity = ctx.get('complexity', '')
+    goal = ctx.get('goal', '')
+    keywords = ctx.get('keywords', '')
     
-    return f"Спеціальність: {specialty}. Рівень освіти: {education}. Інтереси: {interests}. Згенеруй {TOPICS_COUNT} тем."
+    return f"""Спеціальність: {specialty}. 
+Індустрія: {industry}. 
+Рівень освіти: {education}. 
+Тип роботи: {work_type}. 
+Реальний об'єкт: {has_real_object}. 
+Методи: {methods}. 
+Складність: {complexity}. 
+Мета: {goal}. 
+Ключові слова: {keywords}. 
+Інтереси: {interests}. 
+Згенеруй {TOPICS_COUNT} тем."""
 
 def build_critic_input(ctx, topics):
     return f"Спеціальність: {ctx.get('specialty', '')}.\nОціни ці теми:\n{topics}"

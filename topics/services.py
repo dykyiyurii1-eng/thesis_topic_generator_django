@@ -55,10 +55,17 @@ def run_debate_pipeline(session, round_no):
 
     ctx = {
         'specialty': session.specialty,
+        'industry': session.industry,
         'education': session.level or session.institution_type,
         'interests': [(i.name, 'high') for i in session.interests.all()],
+        'work_type': session.get_work_type_display(),
+        'has_real_object': session.has_real_object,
+        'methods': session.methods,
+        'complexity': session.complexity,
+        'goal': session.goal,
+        'keywords': session.keywords,
     }
-
+    
     yield sse(type='status', text=f'Генератор пише... (коло {round_no} з {session.rounds})')
     try:
         raw, provider = call_with_fallback('generator', GENERATOR_SYSTEM, build_generator_input(ctx))

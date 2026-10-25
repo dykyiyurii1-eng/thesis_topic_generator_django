@@ -9,7 +9,7 @@
         <div class="card-brutal p-4">
             <span class="tech-index">SYS.GEN // FORM</span>
             <h2 class="mb-4">СТВОРЕННЯ НОВОЇ ГЕНЕРАЦІЇ</h2>
-
+            
             {% if form.errors %}
                 <div class="alert alert-danger rounded-0 border-dark">
                     {% for field, errs in form.errors.items %}
@@ -20,9 +20,7 @@
 
             <form method="post" id="gen-form">
                 {% csrf_token %}
-                
-                <!-- Спеціальність -->
-                <div class="mb-3 autocomplete">
+               <div class="mb-3 autocomplete">
                     <label class="form-label fw-bold font-monospace">СПЕЦІАЛЬНІСТЬ</label>
                     <input type="text" id="specialty_input" name="specialty" class="form-control rounded-0 border-dark font-monospace" placeholder="Почніть вводити назву..." autocomplete="off" required value="{{ form.specialty.value|default:'' }}">
                     <div id="autocomplete-list" class="autocomplete-items"></div>
@@ -78,105 +76,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const institutionSelect = document.querySelector("#id_institution_type");
-    const levelContainer = document.querySelector("#level-field-container");
-    const specialtyInput = document.querySelector("#specialty_input");
-    const autocompleteList = document.querySelector("#autocomplete-list");
-    
-    function toggleLevelField() {
-        if (institutionSelect.value === 'school' || institutionSelect.value === 'college') {
-            levelContainer.style.display = 'none';
-        } else {
-            levelContainer.style.display = 'block';
-        }
-    }
-    institutionSelect.addEventListener("change", toggleLevelField);
-    toggleLevelField();
-
-    specialtyInput.addEventListener("input", function() {
-        let query = this.value;
-        if (query.length < 2) {
-            autocompleteList.style.display = "none";
-            return;
-        }
-        fetch(`/interests/suggest/?q=${encodeURIComponent(query)}`)
-            .then(response => response.json())
-            .then(data => {
-                autocompleteList.innerHTML = "";
-                if (data.results.length > 0) {
-                    autocompleteList.style.display = "block";
-                    data.results.forEach(item => {
-                        let div = document.createElement("div");
-                        div.className = "autocomplete-item";
-                        div.innerText = item.text;
-                        div.addEventListener("click", function() {
-                            specialtyInput.value = item.text;
-                            autocompleteList.style.display = "none";
-                        });
-                        autocompleteList.appendChild(div);
-                    });
-                } else {
-                    autocompleteList.style.display = "none";
-                }
-            });
-    });
-
-    document.addEventListener("click", function(e) {
-        if (e.target !== specialtyInput && e.target !== autocompleteList) {
-            autocompleteList.style.display = "none";
-        }
-    });
-
-    const MAX_CUSTOM = 5;
-    const hiddenInput = document.querySelector('#id_custom_interests');
-    const customInput = document.querySelector('#custom-input');
-    const addBtn = document.querySelector('#custom-add');
-    const customChipsBox = document.querySelector('#custom-chips');
-    let items = hiddenInput.value ? hiddenInput.value.split(',').map(s => s.trim()).filter(Boolean) : [];
-
-    function renderCustomChips() {
-        customChipsBox.innerHTML = '';
-        items.forEach((name, idx) => {
-            const chip = document.createElement('span');
-            chip.className = 'badge bg-dark rounded-0 p-2 font-monospace';
-            chip.textContent = name + ' ';
-            
-            const x = document.createElement('button');
-            x.type = 'button';
-            x.className = 'btn-close btn-close-white ms-1';
-            x.style.fontSize = '.6rem';
-            x.onclick = () => { items.splice(idx, 1); renderCustomChips(); };
-            
-            chip.appendChild(x);
-            customChipsBox.appendChild(chip);
-        });
-        hiddenInput.value = items.join(', ');
-        addBtn.disabled = items.length >= MAX_CUSTOM;
-    }
-
-    function addCustom() {
-        const name = customInput.value.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
-        if (name.length < 2 || items.length >= MAX_CUSTOM) return;
-        if (!items.some(i => i.toLowerCase() === name.toLowerCase())) items.push(name);
-        customInput.value = '';
-        renderCustomChips();
-    }
-
-    addBtn.onclick = addCustom;
-    customInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addCustom(); } });
-    renderCustomChips();
-
-    document.querySelector('#interest-filter').addEventListener('input', function () {
-        const q = this.value.trim().toLowerCase();
-        document.querySelectorAll('#interest-chips .interest-chip').forEach(el => {
-            el.style.display = el.dataset.name.includes(q) ? '' : 'none';
-        });
-    });
-});
-</script>
 {% endblock %}

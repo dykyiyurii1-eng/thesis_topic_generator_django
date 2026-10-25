@@ -247,6 +247,61 @@ html { scroll-behavior: smooth; }
     color: #fff !important;
 }
 
+.form-control, .form-select {
+    border: 1px solid var(--pure-black) !important;
+    border-radius: var(--radius) !important;
+    background-color: var(--pure-white) !important;
+    color: var(--pure-black) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    padding: 0.5rem 1rem;
+}
+
+.form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 1rem center !important;
+    background-size: 1em !important;
+    padding-right: 2.5rem;
+}
+
+.form-control:focus, .form-select:focus {
+    box-shadow: none !important;
+    border-color: var(--pure-black) !important;
+    outline: 2px solid var(--pure-black);
+    outline-offset: 2px;
+}
+
+select.form-select option {
+    background-color: #fff;
+    color: #000;
+}
+
+.form-check-input {
+    border: var(--border-style) !important;
+    border-radius: 0 !important;
+    background-color: var(--pure-white) !important;
+}
+.form-check-input:checked {
+    background-color: var(--pure-black) !important;
+    border-color: var(--pure-black) !important;
+}
+.form-check-input:focus {
+    box-shadow: none !important;
+    outline: 2px solid var(--pure-black);
+    outline-offset: 2px;
+}
+
+.dropdown-menu {
+    border: var(--border-style) !important;
+    border-radius: var(--radius) !important;
+    background-color: var(--pure-white) !important;
+}
+.dropdown-item:hover {
+    background-color: var(--pure-black) !important;
+    color: var(--pure-white) !important;
+}
+
 @media (max-width: 768px) {
     .agent-window {
         height: 300px;
@@ -279,3 +334,77 @@ html { scroll-behavior: smooth; }
 }
 
 html.invert { filter: invert(1); background: #fff; }
+.form-select {
+    border: 1px solid var(--pure-black) !important;
+    border-radius: var(--radius) !important;
+    background-color: var(--pure-white) !important;
+    color: var(--pure-black) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    padding: 0.5rem 1rem !important;
+    appearance: none !important;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 1rem center !important;
+    background-size: 1em !important;
+}
+
+.form-select:focus {
+    box-shadow: none !important;
+    border-color: var(--pure-black) !important;
+    outline: 2px solid var(--pure-black) !important;
+    outline-offset: 2px !important;
+}
+
+select.form-select option {
+    background-color: var(--pure-white) !important;
+    color: var(--pure-black) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    padding: 10px !important;
+}
+
+html.invert select.form-select {
+    background-color: #000 !important;
+    color: #fff !important;
+    border-color: #fff !important;
+}
+
+html.invert select.form-select option {
+    background-color: #000 !important;
+    color: #fff !important;
+}
+
+html.invert .form-select {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+}
+
+.dropdown-menu {
+    border: 1px solid var(--pure-black) !important;
+    border-radius: var(--radius) !important;
+    background-color: var(--pure-white) !important;
+}
+
+.dropdown-item {
+    color: var(--pure-black) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--pure-black) !important;
+    color: var(--pure-white) !important;
+}
+
+html.invert .dropdown-menu {
+    background-color: #000 !important;
+    border-color: #fff !important;
+}
+
+html.invert .dropdown-item {
+    color: #fff !important;
+}
+
+html.invert .dropdown-item:hover,
+html.invert .dropdown-item:focus {
+    background-color: #fff !important;
+    color: #000 !important;
+}

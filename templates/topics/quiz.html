@@ -1,21 +1,116 @@
 {% extends 'base.html' %}
-{% block title %}Тест інтересів{% endblock %}
+{% load static %}
+
+{% block title %}Тест інтересів · THESIS_GEN{% endblock %}
 
 {% block content %}
-<h1>Тест інтересів</h1>
-<form method="post">
-    {% csrf_token %}
-    {% for question in questions %}
-        <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 8px;">
-            <h3>{{ question.text }}</h3>
-            {% for option in question.options.all %}
-                <label style="display: block; margin: 5px 0; cursor: pointer;">
-                    <input type="checkbox" name="options" value="{{ option.id }}">
-                    {{ option.text }}
-                </label>
-            {% endfor %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            
+            <div class="d-flex justify-content-between align-items-end mb-3">
+                <div>
+                    <span class="tech-index">SYS.QUIZ // TEST</span>
+                    <h1 class="display-6 fw-bold mt-2 mb-0">ТЕСТ ІНТЕРЕСІВ</h1>
+                </div>
+                <div class="font-monospace small fw-bold" id="progress-text">0 / {{ questions|length }}</div>
+            </div>
+            
+            <div class="progress mb-4 rounded-0 border border-dark" style="height: 10px;">
+                <div id="progress-bar" class="progress-bar bg-dark" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+
+            {% if results %}
+                <div class="card-brutal mt-5 p-4" style="overflow-x: hidden;">
+                    <h3 class="fw-bold mb-3">ВАШІ ІНТЕРЕСИ</h3>
+                    <p class="text-muted small mb-4">Оберіть інтереси, які ви хочете бачити за замовчуванням у наступних генераціях.</p>
+                    
+                    <form method="post" action="{% url 'topics:save_default_interests' %}">
+                        {% csrf_token %}
+                        <div class="d-flex flex-wrap gap-2 mb-4">
+                            {% for interest in results %}
+                                <label class="border border-dark p-2 d-flex align-items-center" style="cursor: pointer; max-width: 100%; flex: 0 1 auto;">
+                                    <input type="checkbox" name="default_interests" value="{{ interest.id }}" class="form-check-input me-2 mt-0 rounded-0 border-dark" {% if interest.is_default %}checked{% endif %}>
+                                    <span class="font-monospace" style="word-break: break-word; white-space: normal;">{{ interest.name }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn-brutal btn-brutal-black w-100">ЗБЕРЕГТИ ЯК ЗА ЗАМОВЧУВАННЯМ</button>
+                    </form>
+                </div>
+            {% else %}
+                <form method="post" id="quiz-form">
+                    {% csrf_token %}
+                    
+                    {% for question in questions %}
+                        <div class="card-brutal mb-4 p-4 question-block" data-question-id="{{ question.id }}">
+                            <div class="d-flex justify-content-between mb-3">
+                                <h3 class="fs-5 fw-bold mb-0">{{ forloop.counter }}. {{ question.text }}</h3>
+                                <span class="text-muted font-monospace small">Q-{{ forloop.counter|stringformat:"02d" }}</span>
+                            </div>
+                            
+                            <div class="d-flex flex-column gap-2">
+                                {% for option in question.options.all %}
+                                    <label class="option-label border border-dark p-2 d-flex align-items-center" style="cursor: pointer; transition: all 0.1s;">
+                                        <input type="checkbox" name="options" value="{{ option.id }}" class="form-check-input me-3 mt-0 rounded-0 border-dark option-checkbox">
+                                        <span class="font-monospace small">{{ option.text }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                    
+                    <div class="text-end mt-4">
+                        <button type="submit" class="btn-brutal btn-brutal-black py-3 px-5">ЗАВЕРШИТИ ТЕСТ</button>
+                    </div>
+                </form>
+            {% endif %}
         </div>
-    {% endfor %}
-    <button type="submit" class="btn primary">Завершити</button>
-</form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.option-checkbox');
+    const progressBar = document.querySelector('#progress-bar');
+    const progressText = document.querySelector('#progress-text');
+    const totalQuestions = document.querySelectorAll('.question-block').length;
+    
+    function updateProgress() {
+        let answered = 0;
+        document.querySelectorAll('.question-block').forEach(block => {
+            if (block.querySelector('input:checked')) {
+                answered++;
+            }
+        });
+        
+        const percent = (answered / totalQuestions) * 100;
+        progressBar.style.width = percent + '%';
+        progressBar.setAttribute('aria-valuenow', percent);
+        progressText.textContent = answered + ' / ' + totalQuestions;
+    }
+
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const label = this.closest('label');
+            if (this.checked) {
+                label.classList.add('bg-dark', 'text-white');
+            } else {
+                label.classList.remove('bg-dark', 'text-white');
+            }
+            updateProgress();
+        });
+    });
+
+    document.querySelector('#quiz-form')?.addEventListener('submit', function(e) {
+        const answered = document.querySelectorAll('input:checked').length;
+        if (answered === 0) {
+            e.preventDefault();
+            alert('Будь ласка, оберіть хоча б один варіант відповіді.');
+        }
+    });
+});
+</script>
 {% endblock %}

@@ -1,28 +1,35 @@
 from django import forms
 from .models import GenerationSession
+from .prompts import GENERATOR_SYSTEM
+
 class GenerationSessionForm(forms.ModelForm):
     class Meta:
         model = GenerationSession
-        fields = ['specialty', 'institution_type', 'level', 'work_type', 'rounds', 'interests']
+        fields = ['specialty', 'industry', 'institution_type', 'level', 'work_type', 'rounds', 'has_real_object', 'methods', 'complexity', 'goal', 'keywords', 'interests']
         widgets = {
-            'specialty': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Наприклад: Інформаційні технології'}),
-            'institution_type': forms.Select(attrs={'class': 'form-select'}),
-            'level': forms.Select(attrs={'class': 'form-select'}),
-            'work_type': forms.Select(attrs={'class': 'form-select'}),
-            'rounds': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 3}),
+            'specialty': forms.TextInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'}),
+            'industry': forms.TextInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'}),
+            'institution_type': forms.Select(attrs={'class': 'form-select rounded-0 border-dark font-monospace'}),
+            'level': forms.Select(attrs={'class': 'form-select rounded-0 border-dark font-monospace'}),
+            'work_type': forms.Select(attrs={'class': 'form-select rounded-0 border-dark font-monospace'}),
+            'rounds': forms.NumberInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace', 'min': 1, 'max': 3}),
+            'has_real_object': forms.CheckboxInput(attrs={'class': 'form-check-input rounded-0 border-dark'}),
+            'methods': forms.TextInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'}),
+            'complexity': forms.TextInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'}),
+            'goal': forms.TextInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'}),
+            'keywords': forms.TextInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'}),
             'interests': forms.CheckboxSelectMultiple(),
         }
+
 class EmailSendForm(forms.Form):
     email = forms.EmailField(
         label="Введіть ваш Email",
-        widget=forms.EmailInput(attrs={'class': 'form-control rounded-0 border-dark', 'placeholder': 'example@mail.com'})
+        widget=forms.EmailInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'})
     )
-    from django.core.exceptions import ValidationError
-from .prompts import GENERATOR_SYSTEM
 
 def validate_json_mentioned(value):
     if 'json' not in value.lower():
-        raise ValidationError('У промпті має бути слово «JSON»: провайдери повертають відповідь у JSON-режимі.')
+        raise forms.ValidationError('У промпті має бути слово «JSON»: провайдери повертають відповідь у JSON-режимі.')
 
 class SandboxForm(forms.Form):
     EDUCATION_CHOICES = (('school', 'Школа'), ('college', 'Коледж'), ('bachelor', 'Бакалавр'), ('master', 'Магістр'))
