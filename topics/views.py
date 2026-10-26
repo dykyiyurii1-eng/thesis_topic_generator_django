@@ -1,5 +1,7 @@
-from datetime import timedelta
+import json
 import os
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -24,6 +26,7 @@ from .prompts import (
     SANDBOX_OPTIMIZER_SYSTEM,
 )
 
+
 def sessions_for_request(request):
     if request.user.is_authenticated:
         return GenerationSession.objects.filter(student=request.user)
@@ -42,7 +45,7 @@ def home_view(request):
         'openrouter': os.getenv('OPENROUTER_MODEL', 'meta-llama/llama-3.3-70b-instruct:free')
     }
     return render(request, 'topics/home.html', {
-        'interests': interests, 
+        'interests': interests,
         'hero_image': hero_image,
         'ai_models': ai_models
     })
@@ -52,7 +55,7 @@ def quiz_view(request):
     if request.method == 'POST':
         selected_options = request.POST.getlist('options')
         results = process_quiz_results(request.user, selected_options)
-        
+
         if request.user.is_authenticated:
             user_interests = StudentInterest.objects.filter(student=request.user, interest__in=results)
             for interest in results:
@@ -60,12 +63,12 @@ def quiz_view(request):
                 interest.is_default = si.is_default if si else False
         else:
             request.session['guest_interests'] = [i.id for i in results]
-            
+
         return render(request, 'topics/quiz.html', {
-            'questions': Question.objects.prefetch_related('options').all(), 
+            'questions': Question.objects.prefetch_related('options').all(),
             'results': results
         })
-        
+
     questions = Question.objects.prefetch_related('options').all()
     return render(request, 'topics/quiz.html', {'questions': questions})
 
@@ -97,8 +100,18 @@ def debate_stream_view(request, session_id):
         round_no = int(request.GET.get('round', 1))
     except ValueError:
         return JsonResponse({'error': 'Некоректний номер кола.'}, status=400)
-    response = StreamingHttpResponse(run_debate_pipeline(session, round_no),
-                                     content_type='text/event-stream')
+
+    selected_topic_id = request.GET.get('selected_topic')
+    if selected_topic_id:
+        try:
+            selected_topic_id = int(selected_topic_id)
+        except (ValueError, TypeError):
+            selected_topic_id = None
+
+    response = StreamingHttpResponse(
+        run_debate_pipeline(session, round_no, selected_topic_id=selected_topic_id),
+        content_type='text/event-stream'
+    )
     response['Cache-Control'] = 'no-cache'
     return response
 
@@ -132,11 +145,11 @@ def trial_generate_view(request):
             session.specialty = request.POST.get('specialty', '')
             session.save()
             form.save_m2m()
-            
+
             custom_interests = request.POST.get('custom_interests', '')
             if custom_interests:
                 request.session['guest_custom_interests'] = custom_interests
-                
+
             return redirect('topics:debate_page', session_id=session.id)
     else:
         form = GenerationSessionForm()
@@ -177,7 +190,6 @@ def bulk_delete_sessions(request):
 
 @staff_member_required
 def sandbox_view(request):
-    import json
     MAX_ITERATIONS = 5
 
     def _validate_topics_json(raw):
@@ -382,13 +394,13 @@ class DebatePageView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         session = self.object
-        
+
         done_rounds = session.messages.filter(agent='judge').count()
-        
+
         context['history'] = session.messages.all().order_by('sequence_number')
         context['next_round'] = done_rounds + 1
         context['finished'] = done_rounds >= session.rounds
-        
+
         context['topics_data'] = [
             {
                 'db_id': t.id,
@@ -402,7 +414,7 @@ class DebatePageView(DetailView):
             }
             for t in GeneratedTopic.objects.filter(session=session).order_by('-is_pinned', 'round', '-score')
         ]
-        
+
         return context
 
 

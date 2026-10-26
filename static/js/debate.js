@@ -1,14 +1,27 @@
 (function () {
-    const btn = document.getElementById('start-btn');
+    const btn = document.querySelector('#start-btn');
     if (!btn) return;
-    const statusText = document.getElementById('status-text');
-    const panel = document.getElementById('results-panel');
-    const container = document.getElementById('topics-container');
-    const closedBar = document.getElementById('closed-bar');
+    const statusText = document.querySelector('#status-text');
+    const panel = document.querySelector('#results-panel');
+    const container = document.querySelector('#topics-container');
+    const closedBar = document.querySelector('#closed-bar');
     const totalRounds = parseInt(btn.dataset.totalRounds, 10);
     let source = null;
+    let selectedTopicId = null;
 
-    /* ---------- вікна агентів ---------- */
+    function typewrite(el, text, speed, done) {
+        el.textContent = '';
+        let i = 0;
+        (function tick() {
+            if (i < text.length) {
+                el.textContent += text[i++];
+                setTimeout(tick, speed);
+            } else if (done) {
+                done();
+            }
+        })();
+    }
+
     const WINDOWS = {
         'window-generator': 'ГЕНЕРАТОР',
         'window-critic': 'КРИТИК',
@@ -22,7 +35,7 @@
     }
     function saveState(s) {
         try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
-        catch (e) { /* сховище недоступне */ }
+        catch (e) {}
     }
     const state = loadState();
 
@@ -45,7 +58,7 @@
     }
 
     function applyWindow(id) {
-        const win = document.getElementById(id);
+        const win = document.querySelector('#' + id);
         if (!win) return;
         const col = win.closest('[class*="col-"]');
         const s = state[id] || {};
@@ -59,7 +72,7 @@
     document.querySelectorAll('.win-btn[data-target]').forEach(function (b) {
         b.addEventListener('click', function () {
             const id = b.dataset.target;
-            const win = document.getElementById(id);
+            const win = document.querySelector('#' + id);
             const s = state[id] || { collapsed: false, closed: false };
             if (b.dataset.action === 'collapse') {
                 s.collapsed = !s.collapsed;
@@ -77,7 +90,6 @@
     });
     Object.keys(WINDOWS).forEach(applyWindow);
 
-    /* ---------- діалог ---------- */
     function bodyOf(agent) {
         return document.querySelector('.agent-window-body[data-agent="' + agent + '"]');
     }
@@ -91,12 +103,10 @@
         const div = document.createElement('div');
         div.className = 'agent-msg';
         div.style.whiteSpace = 'pre-wrap';
-        div.textContent = text;
         body.appendChild(div);
-        body.scrollTop = body.scrollHeight;
+        typewrite(div, text, 6, function () { body.scrollTop = body.scrollHeight; });
     }
 
-    /* ---------- картки тем ---------- */
     function renderTopic(t) {
         const col = document.createElement('div');
         col.className = 'col-md-6';
@@ -122,7 +132,26 @@
         pin.disabled = !!t.is_pinned;
         pin.addEventListener('click', function () { pinTopic(t.db_id, pin, col); });
 
-        card.append(h, meta, why, crit, pin);
+        const sel = document.createElement('button');
+        sel.className = 'btn-brutal ms-2';
+        sel.style.marginTop = '0.5rem';
+        sel.textContent = t.db_id === selectedTopicId ? '[✓ ОБРАНО]' : '[ ОБРАТИ ]';
+        if (t.db_id === selectedTopicId) {
+            card.style.outline = '3px solid #000';
+        }
+        sel.addEventListener('click', function () {
+            document.querySelectorAll('.topic-sel-btn').forEach(function (b) {
+                b.textContent = '[ ОБРАТИ ]';
+                const parentCard = b.closest('.agent-window');
+                if (parentCard) parentCard.style.outline = '';
+            });
+            selectedTopicId = t.db_id;
+            sel.textContent = '[✓ ОБРАНО]';
+            card.style.outline = '3px solid #000';
+        });
+        sel.classList.add('topic-sel-btn');
+
+        card.append(h, meta, why, crit, pin, sel);
         col.appendChild(card);
         container.appendChild(col);
     }
@@ -154,7 +183,6 @@
         }
     }
 
-    /* ---------- потік SSE ---------- */
     function start() {
         const round = parseInt(btn.dataset.nextRound, 10);
         if (Number.isNaN(round)) {
@@ -165,7 +193,10 @@
         Object.keys(WINDOWS).forEach(function (id) {
             setStep(id.replace('window-', ''), 'ОЧІКУВАННЯ');
         });
-        source = new EventSource(btn.dataset.streamUrl + '?round=' + round);
+
+        let url = btn.dataset.streamUrl + '?round=' + round;
+        if (selectedTopicId) url += '&selected_topic=' + selectedTopicId;
+        source = new EventSource(url);
 
         source.onmessage = function (e) {
             const d = JSON.parse(e.data);
@@ -187,14 +218,14 @@
         };
         source.onerror = function () {
             source.close();
-            statusText.textContent = 'З\u2019ЄДНАННЯ ПЕРЕРВАНО. ОНОВІТЬ СТОРІНКУ';
+            statusText.textContent = 'З’ЄДНАННЯ ПЕРЕРВАНО. ОНОВІТЬ СТОРІНКУ';
             btn.disabled = false;
         };
     }
 
     btn.addEventListener('click', start);
 
-    const dataEl = document.getElementById('topics-data');
+    const dataEl = document.querySelector('#topics-data');
     const saved = dataEl ? JSON.parse(dataEl.textContent) : [];
     if (saved.length) { saved.forEach(renderTopic); showPanel(); }
 })();
