@@ -4,70 +4,290 @@
 {% block title %}Пісочниця ШІ · THESIS_GEN{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container-fluid py-4 px-3 px-lg-4">
     <div class="row mb-4">
         <div class="col-12">
             <h1 class="display-5 fw-bold">ПІСОЧНИЦЯ ШІ</h1>
-            <p class="text-muted font-monospace">ТУТ МОЖНА ТЕСТУВАТИ ПРОМПТИ (ТІЛЬКИ ДЛЯ АДМІНА)</p>
+            <p class="text-muted font-monospace">ТЕСТУВАННЯ ТА САМОВДОСКОНАЛЕННЯ ПРОМПТІВ</p>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card-brutal p-4">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card-brutal p-4 sticky-top" style="top: 1rem; z-index: 10;">
                 <h3 class="fs-5 fw-bold mb-3">НАЛАШТУВАННЯ</h3>
-                <form method="post">
+                <form method="post" id="sandbox-form">
                     {% csrf_token %}
                     {% for field in form %}
                         <div class="mb-3">
                             <label class="form-label fw-bold" for="{{ field.id_for_label }}">{{ field.label }}</label>
                             {{ field }}
+                            <div class="text-danger small field-error" data-field="{{ field.name }}"></div>
                             {% for e in field.errors %}
                                 <div class="text-danger small">{{ e }}</div>
                             {% endfor %}
                         </div>
                     {% endfor %}
-                    <button type="submit" class="btn-brutal btn-brutal-black w-100">ЗАПУСТИТИ</button>
+                    <button type="submit" class="btn-brutal btn-brutal-black w-100" id="start-btn">
+                        <span id="btn-text">ЗАПУСТИТИ</span>
+                        <span id="btn-spinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                    </button>
                 </form>
             </div>
         </div>
 
-        <div class="col-md-8">
-            <div class="card-brutal p-0" style="height: 100%; min-height: 500px; display: flex; flex-direction: column;">
-                <div class="border-bottom border-dark p-3 d-flex justify-content-between bg-light">
-                    <span class="fw-bold font-monospace cursor">SANDBOX_LOG.txt</span>
-                    <span class="status-dot"></span>
+        <div class="col-lg-8">
+            <div class="card-brutal p-0 d-flex flex-column" style="height: calc(100vh - 6rem); min-height: 600px;">
+                <div class="border-bottom border-dark p-3 d-flex justify-content-between align-items-center bg-light flex-shrink-0">
+                  <span class="fw-bold font-monospace cursor">SANDBOX_LOG.txt</span>
+                    <div class="d-flex gap-2 align-items-center">
+                        <button type="button" class="btn btn-sm btn-outline-dark rounded-0 font-monospace" id="expand-all">[ РОЗГОРНУТИ ВСЕ ]</button>
+                        <button type="button" class="btn btn-sm btn-outline-dark rounded-0 font-monospace" id="collapse-all">[ ЗГОРНУТИ ВСЕ ]</button>
+                        <span class="status-dot" id="status-dot"></span>
+                    </div>
                 </div>
-                <div class="p-3 font-monospace small" style="flex-grow: 1; overflow-y: auto; background: #fafafa;">
+                <div class="p-3 font-monospace small" id="sandbox-log"
+                     style="flex: 1 1 auto; overflow-y: auto; background: #fafafa;">
                     {% for item in log %}
-                        <div class="mb-3 p-2 border border-dark bg-white">
-                            <div class="fw-bold text-muted mb-1">> ITERATION {{ item.n }} {% if item.provider %}({{ item.provider }}){% endif %}</div>
-                            {% if item.raw %}
-                                <div style="white-space: pre-wrap;">{{ item.raw }}</div>
-                            {% endif %}
-                            {% if item.error %}
-                                <div class="text-danger fw-bold mt-2">ERROR: {{ item.error }}</div>
-                            {% endif %}
+                        <div class="mb-3 border border-dark bg-white">
+                            <div class="d-flex justify-content-between align-items-center p-2 bg-dark text-white"
+                                 role="button" data-bs-toggle="collapse" data-bs-target="#srv-step-{{ forloop.counter }}">
+                                <span class="fw-bold">КРОК {{ item.step }}: {{ item.action|upper }}</span>
+                                <span>
+                                    {% if item.provider %}<span class="badge bg-light text-dark rounded-0 ms-2">{{ item.provider }}</span>{% endif %}
+                                    <span class="font-monospace ms-1">[±]</span>
+                                </span>
+                            </div>
+                            <div class="collapse show" id="srv-step-{{ forloop.counter }}">
+                                <div class="p-3">
+                                    {% if item.action == 'Генерація' %}
+                                        {% if item.prompt %}
+                                            <div class="mb-2">
+                                                <span class="text-muted small">ПРОМПТ:</span>
+                                                <pre class="bg-light border border-dark p-2 mt-1 mb-0" style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">{{ item.prompt }}</pre>
+                                            </div>
+                                        {% endif %}
+                                        {% if item.response %}
+                                            <div>
+                                                <span class="text-muted small">ВІДПОВІДЬ:</span>
+                                                <pre class="bg-light border border-dark p-2 mt-1 mb-0" style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">{{ item.response }}</pre>
+                                            </div>
+                                        {% endif %}
+                                    {% elif item.action == 'Оновлення промпту' %}
+                                        {% if item.old_prompt and item.new_prompt %}
+                                            <div class="row g-2">
+                                                <div class="col-md-6">
+                                                    <div class="text-danger small mb-1 fw-bold">− СТАРИЙ ПРОМПТ</div>
+                                                    <pre class="border border-dark p-2 mb-0" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap;">{{ item.old_prompt }}</pre>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="text-success small mb-1 fw-bold">+ НОВИЙ ПРОМПТ</div>
+                                                    <pre class="border border-dark p-2 mb-0" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem; white-space: pre-wrap;">{{ item.new_prompt }}</pre>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if item.error %}
+                                        <div class="alert alert-danger rounded-0 mt-2 mb-0 py-2">ERROR: {{ item.error }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                     {% empty %}
-                        <div class="text-center text-muted mt-5">СИСТЕМА ГОТОВА ДО ЗАПУСКУ</div>
+                        <div class="text-center text-muted mt-5" id="empty-state">СИСТЕМА ГОТОВА ДО ЗАПУСКУ</div>
                     {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('.card-brutal form');
-    
-    if (form) {
-        form.addEventListener('submit', function() {
-            const btn = form.querySelector('button[type="submit"]');
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = 'В ПРОЦЕСІ...';
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('#sandbox-form');
+    const btnText = document.querySelector('#btn-text');
+    const btnSpinner = document.querySelector('#btn-spinner');
+    const logContainer = document.querySelector('#sandbox-log');
+    const statusDot = document.querySelector('#status-dot');
+
+    if (!form) return;
+
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function linesHtml(lines, otherSet, cls) {
+        return lines.map(function (line) {
+            const changed = !otherSet.has(line);
+            const style = changed
+                ? (cls === 'old' ? 'background:#ffe0e0;' : 'background:#e0ffe0;')
+                : '';
+            const prefix = changed ? (cls === 'old' ? '\u2212 ' : '+ ') : '  ';
+            return '<div style="' + style + 'white-space: pre-wrap;">'
+                 + escapeHtml(prefix + line) + '</div>';
+        }).join('');
+    }
+
+    function renderDiff(oldText, newText) {
+        const oldLines = oldText.split('\n');
+        const newLines = newText.split('\n');
+        const oldSet = new Set(oldLines);
+        const newSet = new Set(newLines);
+
+        return '<div class="row g-2">'
+             + '<div class="col-md-6">'
+             + '<div class="text-danger small mb-1 fw-bold">\u2212 СТАРИЙ ПРОМПТ</div>'
+             + '<div class="border border-dark p-2" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem;">'
+             + linesHtml(oldLines, newSet, 'old') + '</div></div>'
+             + '<div class="col-md-6">'
+             + '<div class="text-success small mb-1 fw-bold">+ НОВИЙ ПРОМПТ</div>'
+             + '<div class="border border-dark p-2" style="max-height: 300px; overflow-y: auto; font-size: 0.8rem;">'
+             + linesHtml(newLines, oldSet, 'new') + '</div></div>'
+             + '</div>';
+    }
+
+    function renderLog(items) {
+        if (!items.length) {
+            logContainer.innerHTML = '<div class="text-center text-muted mt-5">СИСТЕМА ГОТОВА ДО ЗАПУСКУ</div>';
+            return;
+        }
+
+        logContainer.innerHTML = items.map(function (item, idx) {
+            const collapseId = 'step-' + idx + '-' + Math.random().toString(36).slice(2, 7);
+            const isGeneration = item.action === 'Генерація';
+            const isUpdate = item.action === 'Оновлення промпту';
+            const badge = item.provider
+                ? '<span class="badge bg-light text-dark rounded-0 ms-2">' + escapeHtml(item.provider) + '</span>'
+                : '';
+
+            let html = '<div class="mb-3 border border-dark bg-white">';
+
+            html += '<div class="d-flex justify-content-between align-items-center p-2 bg-dark text-white" '
+                  + 'role="button" data-bs-toggle="collapse" data-bs-target="#' + collapseId + '">'
+                  + '<span class="fw-bold">КРОК ' + escapeHtml(item.step) + ': '
+                  + escapeHtml((item.action || '').toUpperCase()) + '</span>'
+                  + '<span>' + badge + ' <span class="font-monospace ms-1">[±]</span></span>'
+                  + '</div>';
+
+            html += '<div class="collapse show" id="' + collapseId + '"><div class="p-3">';
+
+            if (isGeneration) {
+                if (item.prompt) {
+                    html += '<div class="mb-2"><span class="text-muted small">ПРОМПТ:</span>'
+                          + '<pre class="bg-light border border-dark p-2 mt-1 mb-0" style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">'
+                          + escapeHtml(item.prompt) + '</pre></div>';
+                }
+                if (item.response) {
+                    html += '<div><span class="text-muted small">ВІДПОВІДЬ:</span>'
+                          + '<pre class="bg-light border border-dark p-2 mt-1 mb-0" style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">'
+                          + escapeHtml(item.response) + '</pre></div>';
+                }
+            } else if (isUpdate && item.old_prompt && item.new_prompt) {
+                html += renderDiff(item.old_prompt, item.new_prompt);
             }
+
+            if (item.error) {
+                html += '<div class="alert alert-danger rounded-0 mt-2 mb-0 py-2">ERROR: '
+                      + escapeHtml(item.error) + '</div>';
+            }
+
+            html += '</div></div></div>';
+            return html;
+        }).join('');
+
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function setLoading(isLoading) {
+        if (isLoading) {
+            btnText.textContent = 'ДУМАЮ... (ЦЕ МОЖЕ ЗАЙНЯТИ 30-60 СЕК)';
+            btnSpinner.classList.remove('d-none');
+            form.querySelector('button[type="submit"]').disabled = true;
+            if (statusDot) statusDot.classList.add('step-active');
+        } else {
+            btnText.textContent = 'ЗАПУСТИТИ';
+            btnSpinner.classList.add('d-none');
+            form.querySelector('button[type="submit"]').disabled = false;
+            if (statusDot) statusDot.classList.remove('step-active');
+        }
+    }
+
+    function clearFieldErrors() {
+        form.querySelectorAll('.field-error').forEach(function (el) {
+            el.textContent = '';
+        });
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        clearFieldErrors();
+        setLoading(true);
+        logContainer.innerHTML = '<div class="text-center text-muted mt-5">ЗАПУСК ЦИКЛУ... ЗАЧЕКАЙТЕ</div>';
+
+        const formData = new FormData(form);
+
+        fetch(form.action || window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        })
+            .then(function (response) {
+                return response.json().then(function (data) {
+                    return { ok: response.ok, data: data };
+                });
+            })
+            .then(function (result) {
+                setLoading(false);
+
+                if (!result.ok) {
+                    if (result.data && result.data.errors) {
+                        Object.keys(result.data.errors).forEach(function (field) {
+                            const errEl = form.querySelector('.field-error[data-field="' + field + '"]');
+                            if (errEl) {
+                                errEl.textContent = result.data.errors[field].join(' ');
+                            }
+                        });
+                    } else {
+                        logContainer.innerHTML = '<div class="text-danger fw-bold p-3">ПОМИЛКА ЗАПИТУ</div>';
+                    }
+                    return;
+                }
+
+                if (result.data && Array.isArray(result.data.log)) {
+                    renderLog(result.data.log);
+                }
+            })
+            .catch(function (err) {
+                setLoading(false);
+                logContainer.innerHTML = '<div class="text-danger fw-bold p-3">ПОМИЛКА МЕРЕЖІ: '
+                    + escapeHtml(err.message) + '</div>';
+            });
+    });
+
+    const expandBtn = document.querySelector('#expand-all');
+    const collapseBtn = document.querySelector('#collapse-all');
+
+    if (expandBtn) {
+        expandBtn.addEventListener('click', function () {
+            logContainer.querySelectorAll('.collapse').forEach(function (el) {
+                bootstrap.Collapse.getOrCreateInstance(el, { toggle: false }).show();
+            });
+        });
+    }
+    if (collapseBtn) {
+        collapseBtn.addEventListener('click', function () {
+            logContainer.querySelectorAll('.collapse').forEach(function (el) {
+                bootstrap.Collapse.getOrCreateInstance(el, { toggle: false }).hide();
+            });
         });
     }
 });

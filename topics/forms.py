@@ -1,6 +1,7 @@
 from django import forms
 from .models import GenerationSession
-from .prompts import GENERATOR_SYSTEM
+from .prompts import GENERATOR_SYSTEM, SANDBOX_GENERATOR_SYSTEM
+
 
 class GenerationSessionForm(forms.ModelForm):
     class Meta:
@@ -21,48 +22,48 @@ class GenerationSessionForm(forms.ModelForm):
             'interests': forms.CheckboxSelectMultiple(),
         }
 
+
 class EmailSendForm(forms.Form):
     email = forms.EmailField(
         label="Введіть ваш Email",
         widget=forms.EmailInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'})
     )
 
+
 def validate_json_mentioned(value):
     if 'json' not in value.lower():
         raise forms.ValidationError('У промпті має бути слово «JSON»: провайдери повертають відповідь у JSON-режимі.')
 
+
 class SandboxForm(forms.Form):
-    EDUCATION_CHOICES = (('school', 'Школа'), ('college', 'Коледж'), ('bachelor', 'Бакалавр'), ('master', 'Магістр'))
-    
     system_prompt = forms.CharField(
-        label='Системний промпт', 
-        widget=forms.Textarea(attrs={'rows': 8, 'class': 'form-control rounded-0 border-dark font-monospace'}),
-        initial=GENERATOR_SYSTEM, 
-        max_length=4000, 
-        validators=[validate_json_mentioned]
+        widget=forms.Textarea(attrs={
+            'rows': 12,
+            'class': 'form-control rounded-0 border-dark font-monospace',
+        }),
+        initial=SANDBOX_GENERATOR_SYSTEM,
+        label='Системний промпт',
     )
     specialty = forms.CharField(
-        label='Спеціальність', 
-        max_length=100, 
-        initial='Інформатика',
-        widget=forms.TextInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'})
+        max_length=200,
+        label='Спеціальність',
+        widget=forms.TextInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'}),
     )
-    education = forms.ChoiceField(
-        label='Рівень освіти', 
-        choices=EDUCATION_CHOICES, 
-        initial='bachelor',
-        widget=forms.Select(attrs={'class': 'form-control rounded-0 border-dark font-monospace'})
+    education = forms.CharField(
+        max_length=100,
+        label='Освітній рівень',
+        widget=forms.TextInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'}),
     )
     interests = forms.CharField(
-        label='Інтереси (через кому)', 
-        max_length=200, 
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'})
+        widget=forms.Textarea(attrs={
+            'rows': 3,
+            'class': 'form-control rounded-0 border-dark font-monospace',
+        }),
+        label='Інтереси (через кому)',
     )
     iterations = forms.IntegerField(
-        label='Ітерацій (1–5)', 
-        min_value=1, 
-        max_value=5, 
-        initial=1,
-        widget=forms.NumberInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'})
+        min_value=1, max_value=5, initial=2,
+        label='Кількість ітерацій',
+        widget=forms.NumberInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'}),
     )
+    

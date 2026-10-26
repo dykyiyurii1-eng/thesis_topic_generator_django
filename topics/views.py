@@ -19,8 +19,10 @@ from .models import (Interest, Question, GenerationSession, GeneratedTopic,
                      AgentMessage, HomePageImage, StudentInterest)
 from .services import process_quiz_results, run_debate_pipeline
 from .llm import call_with_fallback, LLMError
-from .prompts import build_generator_input
-
+from .prompts import (
+    build_generator_input,
+    SANDBOX_OPTIMIZER_SYSTEM,
+)
 
 def sessions_for_request(request):
     if request.user.is_authenticated:
@@ -175,37 +177,159 @@ def bulk_delete_sessions(request):
 
 @staff_member_required
 def sandbox_view(request):
+    import json
+    MAX_ITERATIONS = 5
+
+    def _validate_topics_json(raw):
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as e:
+            return None, f'Невалідний JSON: {e}'
+        if not isinstance(data, list) or len(data) != 5:
+            return None, 'Очікується масив рівно з 5 елементів'
+        required = {'id', 'title', 'why', 'difficulty'}
+        for i, item in enumerate(data, 1):
+            if not isinstance(item, dict):
+                return None, f'Елемент {i} — не об\'єкт'
+            missing = required - item.keys()
+            if missing:
+                return None, f'Елемент {i} без полів: {", ".join(sorted(missing))}'
+            if item['difficulty'] not in ('easy', 'medium', 'hard'):
+                return None, f'Елемент {i}: некоректний difficulty "{item["difficulty"]}"'
+        return data, None
+
+    def _looks_like_topics_json(text):
+        try:
+            data = json.loads(text)
+            if isinstance(data, dict) and 'title' in data:
+                return True
+            if isinstance(data, list) and data and isinstance(data[0], dict) and 'title' in data[0]:
+                return True
+        except (json.JSONDecodeError, IndexError):
+            pass
+        return False
+
     if request.method == 'POST':
         form = SandboxForm(request.POST)
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
         if form.is_valid():
             cd = form.cleaned_data
-            ctx = {
-                'specialty': cd['specialty'],
-                'education': cd['education'],
-                'interests': [(i.strip(), 'high') for i in cd['interests'].split(',') if i.strip()],
-            }
-            
+            current_prompt = cd['system_prompt']
+            specialty = cd['specialty']
+            education = cd['education']
+            interests = cd['interests']
+            iterations = cd['iterations']
+
+            if iterations > MAX_ITERATIONS:
+                iterations = MAX_ITERATIONS
+
             log = []
-            for n in range(1, cd['iterations'] + 1):
+
+            for i in range(1, iterations + 1):
+                ctx = {
+                    'specialty': specialty,
+                    'education': education,
+                    'interests': [(j.strip(), 'high') for j in interests.split(',') if j.strip()],
+                }
+
                 try:
-                    raw, provider = call_with_fallback(
-                        'generator', cd['system_prompt'], build_generator_input(ctx)
+                    raw_gen, provider_gen = call_with_fallback(
+                        'generator', current_prompt, build_generator_input(ctx)
                     )
-                    log.append({'n': n, 'provider': provider, 'raw': raw})
                 except LLMError as e:
-                    log.append({'n': n, 'error': str(e)})
+                    log.append({'step': i, 'action': 'Генерація', 'error': str(e)})
                     break
-   
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+
+                data, err = _validate_topics_json(raw_gen)
+                if err:
+                    log.append({
+                        'step': i,
+                        'action': 'Генерація',
+                        'prompt': current_prompt,
+                        'response': raw_gen,
+                        'error': f'Формат порушено: {err}',
+                        'provider': provider_gen,
+                    })
+                    break
+
+                log.append({
+                    'step': i,
+                    'action': 'Генерація',
+                    'prompt': current_prompt,
+                    'response': raw_gen,
+                    'provider': provider_gen,
+                })
+
+                if i < iterations:
+                    optimizer_user = (
+                        f"Поточний системний промпт:\n{current_prompt}\n\n"
+                        f"Приклад відповіді (фрагмент):\n{raw_gen[:800]}\n\n"
+                        f"Перепиши САМЕ СИСТЕМНИЙ ПРОМПТ (не відповідь). Поверни ТІЛЬКИ новий текст промпту:"
+                    )
+
+                    try:
+                        new_prompt, provider_opt = call_with_fallback(
+                            'critic', SANDBOX_OPTIMIZER_SYSTEM, optimizer_user
+                        )
+                    except LLMError as e:
+                        log.append({'step': i, 'action': 'Оновлення промпту', 'error': str(e)})
+                        break
+
+                    new_prompt = (new_prompt or '').strip()
+
+                    if not new_prompt:
+                        log.append({
+                            'step': i,
+                            'action': 'Оновлення промпту',
+                            'error': 'Оптимізатор повернув порожній промпт. Цикл зупинено.',
+                            'provider': provider_opt,
+                        })
+                        break
+
+                    if _looks_like_topics_json(new_prompt):
+                        log.append({
+                            'step': i,
+                            'action': 'Оновлення промпту',
+                            'old_prompt': current_prompt,
+                            'new_prompt': new_prompt,
+                            'error': 'Оптимізатор повернув JSON-відповідь замість промпту. Зміну відхилено.',
+                            'provider': provider_opt,
+                        })
+                        break
+
+                    if len(new_prompt) < len(current_prompt) * 0.7:
+                        log.append({
+                            'step': i,
+                            'action': 'Оновлення промпту',
+                            'old_prompt': current_prompt,
+                            'new_prompt': new_prompt,
+                            'error': f'Новий промпт занадто короткий ({len(new_prompt)} vs {len(current_prompt)} симв.). Зміну відхилено.',
+                            'provider': provider_opt,
+                        })
+                        break
+
+                    log.append({
+                        'step': i,
+                        'action': 'Оновлення промпту',
+                        'old_prompt': current_prompt,
+                        'new_prompt': new_prompt,
+                        'provider': provider_opt,
+                    })
+                    current_prompt = new_prompt
+
+            if is_ajax:
                 return JsonResponse({'log': log})
-            
+
             return render(request, 'topics/sandbox.html', {'form': form, 'log': log})
+
         else:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            if is_ajax:
                 return JsonResponse({'errors': form.errors}, status=400)
+
     else:
         form = SandboxForm()
-    
+
     return render(request, 'topics/sandbox.html', {'form': form})
 
 
