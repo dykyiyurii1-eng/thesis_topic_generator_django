@@ -28,7 +28,7 @@
                         {% csrf_token %}
                         <div class="mb-3">
                             <label class="form-label fw-bold">EMAIL АБО ЛОГІН</label>
-                            <input type="text" name="username" class="form-control rounded-0 border-dark" required>
+                            <input type="text" name="username" id="login_username" class="form-control rounded-0 border-dark" required>
                         </div>
                         <div class="mb-4">
                             <label class="form-label fw-bold">ПАРОЛЬ</label>
@@ -37,7 +37,7 @@
                                 <button class="btn btn-outline-dark rounded-0 border-dark toggle-password" type="button" data-target="login_password">ПОКАЗАТИ</button>
                             </div>
                         </div>
-                        <button type="submit" class="btn-brutal btn-brutal-black w-100">УВІЙТИ</button>
+                        <button type="submit" id="login_submit_btn" class="btn-brutal btn-brutal-black w-100">УВІЙТИ</button>
                     </form>
                 </div>
 
@@ -58,11 +58,11 @@
                         {% csrf_token %}
                         <div class="mb-3">
                             <label class="form-label fw-bold">ІМ'Я КОРИСТУВАЧА</label>
-                            <input type="text" name="username" class="form-control rounded-0 border-dark" required>
+                            <input type="text" name="username" id="reg_username" class="form-control rounded-0 border-dark" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">EMAIL</label>
-                            <input type="email" name="email" class="form-control rounded-0 border-dark" required>
+                            <input type="email" name="email" id="reg_email" class="form-control rounded-0 border-dark" required>
                         </div>
                         
                         <div class="mb-3">
@@ -87,7 +87,7 @@
                             </div>
                         </div>
                         
-                        <button type="submit" class="btn-brutal btn-brutal-black w-100 mt-3">ЗАРЕЄСТРУВАТИСЯ</button>
+                        <button type="submit" id="reg_submit_btn" class="btn-brutal btn-brutal-black w-100 mt-3">ЗАРЕЄСТРУВАТИСЯ</button>
                     </form>
                 </div>
             </div>
