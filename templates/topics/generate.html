@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load static %}
 
 {% block title %}Створення генерації · THESIS_GEN{% endblock %}
@@ -76,4 +76,53 @@
         </div>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.querySelector('#custom-input');
+    const addBtn = document.querySelector('#custom-add');
+    const chips = document.querySelector('#custom-chips');
+    const hidden = document.querySelector('#id_custom_interests');
+    let items = [];
+
+    const render = () => {
+        hidden.value = items.join(',');
+        chips.innerHTML = '';
+        items.forEach((text, idx) => {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-dark text-white rounded-0 p-2 font-monospace me-2';
+            badge.textContent = `${text} `;
+
+            const close = document.createElement('button');
+            close.type = 'button';
+            close.className = 'btn-close btn-close-white ms-2';
+            close.addEventListener('click', () => {
+                items.splice(idx, 1);
+                render();
+            });
+
+            badge.appendChild(close);
+            chips.appendChild(badge);
+        });
+    };
+
+    const add = () => {
+        const val = input.value.trim();
+        if (val && items.length < 5 && !items.includes(val)) {
+            items.push(val);
+            input.value = '';
+            render();
+        }
+    };
+
+    addBtn.addEventListener('click', add);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            add();
+        }
+    });
+});
+</script>
 {% endblock %}

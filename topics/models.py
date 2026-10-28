@@ -1,4 +1,4 @@
-from django.db import models
+﻿from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.urls import reverse
@@ -143,7 +143,7 @@ class GeneratedTopic(models.Model):
         return self.title
 
     def get_absolute_url(self):
-        return reverse('topics:topic_detail', kwargs={'pk': self.pk})
+        return reverse('topics:debate_page', kwargs={'session_id': self.session_id})
 
 class AgentMessage(models.Model):
     AGENT_CHOICES = (('generator', 'Генератор'), ('critic', 'Критик'), ('judge', 'Суддя'), ('system', 'Система'), ('user', 'Користувач'))

@@ -1,4 +1,4 @@
-import json
+﻿import json
 import os
 from datetime import timedelta
 
@@ -116,10 +116,15 @@ def debate_stream_view(request, session_id):
     return response
 
 
-@login_required
+
+
 @require_POST
 def pin_topic_view(request, topic_id):
-    topic = get_object_or_404(GeneratedTopic, id=topic_id, session__student=request.user)
+    topic = get_object_or_404(
+        GeneratedTopic,
+        id=topic_id,
+        session__in=sessions_for_request(request),
+    )
     topic.is_pinned = not topic.is_pinned
     topic.save(update_fields=['is_pinned'])
     return JsonResponse({'pinned': topic.is_pinned})

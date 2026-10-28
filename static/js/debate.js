@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
     const btn = document.querySelector('#start-btn');
     if (!btn) return;
     const statusText = document.querySelector('#status-text');
@@ -128,7 +128,8 @@
 
         const pin = document.createElement('button');
         pin.className = 'btn-brutal';
-        pin.textContent = t.is_pinned ? 'ЗАКРІПЛЕНО' : 'ЗАКРІПИТИ';
+        pin.textContent = t.is_pinned ? 'ДОДАНО' : 'ДОДАТИ';
+        pin.title = t.is_pinned ? 'Закріплено в обрані' : 'Додати тему до закріплених';
         pin.disabled = !!t.is_pinned;
         pin.addEventListener('click', function () { pinTopic(t.db_id, pin, col); });
 
@@ -156,14 +157,42 @@
         container.appendChild(col);
     }
 
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     function pinTopic(id, button, col) {
         const url = btn.dataset.pinUrlTemplate.replace('/0/', '/' + id + '/');
-        fetch(url, { method: 'POST', headers: { 'X-CSRFToken': btn.dataset.csrf } })
+        const csrfToken = btn.dataset.csrf || getCookie('csrftoken');
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
             .then(function (r) {
                 if (!r.ok || r.redirected) throw new Error(r.status);
-                button.textContent = 'ЗАКРІПЛЕНО';
-                button.disabled = true;
-                container.prepend(col);
+                return r.json();
+            })
+            .then(function (data) {
+                if (data.pinned) {
+                    button.textContent = 'ДОДАНО';
+                    container.prepend(col);
+                } else {
+                    button.textContent = 'ДОДАТИ';
+                }
             })
             .catch(function () { button.textContent = 'ПОМИЛКА, СПРОБУЙ ЩЕ'; });
     }
