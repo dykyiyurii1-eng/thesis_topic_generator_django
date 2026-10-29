@@ -67,6 +67,7 @@ def call_gemini(system, user, temperature=0.7):
             "maxOutputTokens": 4096
         }
     }
+    print(payload)
 
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=60)

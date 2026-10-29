@@ -22,6 +22,15 @@ class GenerationSessionForm(forms.ModelForm):
             'interests': forms.CheckboxSelectMultiple(),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in ['institution_type', 'level', 'work_type']:
+            if field_name in self.fields:
+                choices = list(self.fields[field_name].choices)
+                if choices and choices[0][0] == '':
+                    choices[0] = ('', '- Оберіть варіант -')
+                    self.fields[field_name].choices = choices
+
 
 class EmailSendForm(forms.Form):
     email = forms.EmailField(

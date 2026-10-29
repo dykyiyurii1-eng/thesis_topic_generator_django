@@ -6,17 +6,55 @@
 {% block content %}
 <div class="container py-4">
     
-    <div class="row mb-4 align-items-end">
-        <div class="col-md-8">
+    <div class="row mb-3 align-items-end">
+        <div class="col-12">
             <span class="tech-index">SYS.HIST // LOGS</span>
-            <h1 class="display-5 mt-3 mb-0">МОЯ ІСТОРІЯ</h1>
+            <h1 class="display-5 mt-2 mb-0">МОЯ ІСТОРІЯ</h1>
         </div>
-        <div class="col-md-4">
-            <form method="get" class="d-flex gap-2">
-                <input type="text" name="q" value="{{ q }}" class="form-control rounded-0 border-dark font-monospace" placeholder="Пошук за спеціальністю...">
-                <button type="submit" class="btn-brutal btn-brutal-black py-2">ЗНАЙТИ</button>
-            </form>
-        </div>
+    </div>
+
+    <div class="card-brutal p-3 mb-4">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold font-monospace mb-1">ПОШУК</label>
+                <input type="text" name="q" value="{{ q }}" class="form-control rounded-0 border-dark font-monospace" placeholder="Спеціальність, ключові слова...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold font-monospace mb-1">СТАТУС</label>
+                <select name="status" class="form-select rounded-0 border-dark font-monospace">
+                    <option value="">Всі статуси</option>
+                    {% for code, label in status_choices %}
+                        <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold font-monospace mb-1">ЗАКЛАД</label>
+                <select name="institution_type" class="form-select rounded-0 border-dark font-monospace">
+                    <option value="">Всі заклади</option>
+                    {% for code, label in institution_choices %}
+                        <option value="{{ code }}" {% if selected_institution == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold font-monospace mb-1">СОРТУВАННЯ</label>
+                <select name="sort" class="form-select rounded-0 border-dark font-monospace">
+                    <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %}>Спочатку нові</option>
+                    <option value="oldest" {% if selected_sort == 'oldest' %}selected{% endif %}>Спочатку старі</option>
+                </select>
+            </div>
+            <div class="col-md-1 d-flex gap-1">
+                <button type="submit" class="btn-brutal btn-brutal-black py-2 px-2 w-100" title="Застосувати">
+                    ОК
+                </button>
+                {% if q or selected_status or selected_institution or selected_sort != 'newest' %}
+                    <a href="{% url 'topics:history' %}" class="btn-brutal py-2 px-2 text-decoration-none" title="Скинути фільтри">
+                        ✕
+                    </a>
+                {% endif %}
+            </div>
+        </form>
     </div>
 
     <div class="separator"></div>
@@ -86,13 +124,13 @@
     {% if is_paginated %}
         <div class="d-flex justify-content-center gap-2 mt-4 font-monospace">
             {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}" class="btn-brutal py-1 px-3">НАЗАД</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}" class="btn-brutal py-1 px-3">НАЗАД</a>
             {% endif %}
             
             <span class="btn-brutal py-1 px-3 disabled">СТОР. {{ page_obj.number }} З {{ page_obj.paginator.num_pages }}</span>
             
             {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}" class="btn-brutal py-1 px-3">ВПЕРЕД</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}" class="btn-brutal py-1 px-3">ВПЕРЕД</a>
             {% endif %}
         </div>
     {% endif %}

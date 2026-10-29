@@ -122,6 +122,7 @@ h1, h2, h3, h4, .brand-logo {
 }
 .agent-window.expanded {
     position: fixed;
+    font-size: 4rem;
     inset: 5%;
     z-index: 1050;
     height: auto;
@@ -132,6 +133,7 @@ h1, h2, h3, h4, .brand-logo {
 }
 .agent-window.expanded .agent-window-body {
     min-height: 0;
+    font-size: 2rem;
 }
 
 .agent-window-header {

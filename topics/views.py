@@ -147,13 +147,14 @@ def trial_generate_view(request):
             session = form.save(commit=False)
             session.guest_key = request.session.session_key
             session.status = 'running'
+            custom_words = request.POST.get('custom_interests', '') or request.POST.get('keywords', '')
+            if custom_words:
+                session.keywords = custom_words.strip()
+                request.session['guest_custom_interests'] = custom_words.strip()
+
             session.specialty = request.POST.get('specialty', '')
             session.save()
             form.save_m2m()
-
-            custom_interests = request.POST.get('custom_interests', '')
-            if custom_interests:
-                request.session['guest_custom_interests'] = custom_interests
 
             return redirect('topics:debate_page', session_id=session.id)
     else:
@@ -378,7 +379,9 @@ class SessionCreateView(LoginRequiredMixin, CreateView):
         form.instance.student = self.request.user
         form.instance.status = 'running'
         form.instance.specialty = self.request.POST.get('specialty', '')
-        form.instance.interests_text = self.request.POST.get('custom_interests', '')
+        custom_words = self.request.POST.get('custom_interests', '') or self.request.POST.get('keywords', '')
+        if custom_words:
+            form.instance.keywords = custom_words.strip()
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -433,15 +436,46 @@ class SessionListView(LoginRequiredMixin, ListView):
         qs = (GenerationSession.objects
               .filter(student=self.request.user)
               .annotate(topics_count=Count('topics', distinct=True)))
+        
         q = self.request.GET.get('q', '').strip()
         if q:
-            qs = qs.filter(Q(specialty__icontains=q) |
-                           Q(interests__name__icontains=q)).distinct()
+            qs = qs.filter(
+                Q(specialty__icontains=q) |
+                Q(interests__name__icontains=q) |
+                Q(keywords__icontains=q)
+            ).distinct()
+
+        status = self.request.GET.get('status', '').strip()
+        if status:
+            qs = qs.filter(status=status)
+
+        institution_type = self.request.GET.get('institution_type', '').strip()
+        if institution_type:
+            qs = qs.filter(institution_type=institution_type)
+
+        sort = self.request.GET.get('sort', 'newest').strip()
+        if sort == 'oldest':
+            qs = qs.order_by('created_at')
+        else:
+            qs = qs.order_by('-created_at')
+
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['q'] = self.request.GET.get('q', '').strip()
+        context['selected_status'] = self.request.GET.get('status', '').strip()
+        context['selected_institution'] = self.request.GET.get('institution_type', '').strip()
+        context['selected_sort'] = self.request.GET.get('sort', 'newest').strip()
+        context['status_choices'] = GenerationSession.STATUS_CHOICES
+        context['institution_choices'] = GenerationSession.INSTITUTION_CHOICES
+        
+
+        query_params = self.request.GET.copy()
+        if 'page' in query_params:
+            query_params.pop('page')
+        context['filter_querystring'] = query_params.urlencode()
+
         for session in context['sessions']:
             session.pinned_topics = session.topics.filter(is_pinned=True)
         return context

@@ -27,7 +27,8 @@
                 <span class="tech-index">SYS.00 // MAIN</span>
                 <h1 class="display-3 mt-3 mb-4" style="font-size: 4rem; line-height: 1;">ГЕНЕРАТОР ТЕМ</h1>
                 <p class="fs-5 mb-4" style="max-width: 600px;">
-                    Цифрова система для академічних досліджень. Запусти дебати між двома нейромережами: Генератором і Критиком. Отримай 5 ідеальних тем, проаналізованих штучним інтелектом.
+                    Цифрова система для генерацій академічних тем. Запусти дебати між трьома нейромережами: Генератором, Критиком та Суддею. <br>
+                    Отримай 5 ідеальних тем, проаналізованих штучним інтелектом.
                 </p>
             </div>
             <div class="d-flex gap-3 flex-wrap">
@@ -70,13 +71,16 @@
         </div>
     </div>
 </div>
-
+<h2 class="display-3 mt-3 mb-4" style="font-size: 4rem; line-height: 1;">Отримай теми всього за 3 кроки</h2>
 <div class="row g-4">
-    <div class="col-md-4">
+    <div class="col-md-4" >
+         
         <div class="card-brutal">
             <span class="tech-index">MOD.01</span>
             <div class="fs-1 fw-bold mb-2" style="font-family: 'Syne';">01.</div>
-            <h3 class="fs-5">ТЕСТ ІНТЕРЕСІВ</h3>
+            <h3 class="fs-5" >
+                <a href="{% url 'topics:quiz' %}" class="text-decoration-none text-reset d-block"> ТЕСТ ІНТЕРЕСІВ</a>
+               </h3>
             <div class="separator"></div>
             <p class="small text-muted mb-0">Пройди коротке опитування, щоб система визначила твої ключові академічні зацікавлення.</p>
         </div>
@@ -86,7 +90,9 @@
         <div class="card-brutal">
             <span class="tech-index">MOD.02</span>
             <div class="fs-1 fw-bold mb-2" style="font-family: 'Syne';">02.</div>
-            <h3 class="fs-5">ДЕБАТИ ШІ</h3>
+           <a href="{% if user.is_authenticated %}{% url 'topics:generate' %}{% else %}{% url 'topics:trial' %}{% endif %}" class="text-decoration-none text-reset d-block">
+                    ДЕБАТИ ШІ
+                </a>
             <div class="separator"></div>
             <p class="small text-muted mb-0">Генератор пропонує ідеї, Критик знаходить недоліки. Обери найкращу тему в результаті дебатів.</p>
         </div>
