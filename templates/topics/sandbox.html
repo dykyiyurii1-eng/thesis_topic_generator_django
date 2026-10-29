@@ -86,6 +86,8 @@
                                                 </div>
                                             </div>
                                         {% endif %}
+                                                                            {% elif item.action == 'Підсумок' %}
+                                        <div class="fw-bold text-success fs-6">{{ item.summary }}</div>
                                     {% endif %}
                                     {% if item.error %}
                                         <div class="alert alert-danger rounded-0 mt-2 mb-0 py-2">ERROR: {{ item.error }}</div>
@@ -190,6 +192,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             } else if (isUpdate && item.old_prompt && item.new_prompt) {
                 html += renderDiff(item.old_prompt, item.new_prompt);
+            }              else if (item.action === 'Підсумок') {
+                html += '<div class="fw-bold text-success fs-6">' + escapeHtml(item.summary) + '</div>';
             }
 
             if (item.error) {

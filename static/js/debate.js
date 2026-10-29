@@ -211,6 +211,23 @@
             statusText.textContent = 'КОЛО ' + round + ' ГОТОВЕ';
         }
     }
+    function friendlyError(raw) {
+    const t = String(raw || '').toLowerCase();
+
+
+    if (/429|rate.?limit|quota|exhausted|too many requests|tokens per day|tpd/.test(t)) {
+        return 'Денні ліміти ШІ-сервісів на сьогодні вичерпані. Спробуйте завтра.';
+    }
+
+    if (/json_validate_failed|failed to validate json|invalid_request_error/.test(t)) {
+        return 'ШІ повернув відповідь у неправильному форматі. Натисніть кнопку ще раз.';
+    }
+
+    if (/усі ші-провайдери недоступні|all providers/.test(t)) {
+        return 'ШІ-сервіси зараз недоступні. Спробуйте ще раз за кілька хвилин.';
+    }
+    return 'Сталася помилка під час генерації. Спробуйте ще раз.';
+}
 
     function start() {
         const round = parseInt(btn.dataset.nextRound, 10);
@@ -240,10 +257,11 @@
                 showPanel();
                 finishRound(d.round);
             } else if (d.type === 'error') {
-                source.close();
-                statusText.textContent = 'ПОМИЛКА: ' + d.text;
-                btn.disabled = false;
-            }
+    source.close();
+    console.error('Помилка генерації:', d.text);
+    statusText.textContent = friendlyError(d.text);
+    btn.disabled = false;
+}
         };
         source.onerror = function () {
             source.close();

@@ -123,6 +123,17 @@ document.addEventListener('DOMContentLoaded', () => {
             add();
         }
     });
+        
+    const filter = document.querySelector('#interest-filter');
+    if (filter) {
+        filter.addEventListener('input', () => {
+            const q = filter.value.trim().toLowerCase();
+            document.querySelectorAll('#interest-chips .interest-chip').forEach(chip => {
+                const name = chip.dataset.name || '';
+                chip.style.display = name.includes(q) ? '' : 'none';
+            });
+        });
+    }
 });
 </script>
 {% endblock %}

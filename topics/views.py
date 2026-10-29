@@ -243,6 +243,7 @@ def sandbox_view(request):
                 iterations = MAX_ITERATIONS
 
             log = []
+            consecutive_fails = 0
 
             for i in range(1, iterations + 1):
                 ctx = {
@@ -251,90 +252,127 @@ def sandbox_view(request):
                     'interests': [(j.strip(), 'high') for j in interests.split(',') if j.strip()],
                 }
 
+                # ── ГЕНЕРАЦІЯ ──
                 try:
                     raw_gen, provider_gen = call_with_fallback(
                         'generator', current_prompt, build_generator_input(ctx)
                     )
-                except LLMError as e:
-                    log.append({'step': i, 'action': 'Генерація', 'error': str(e)})
-                    break
+                except (LLMError, Exception) as e:
+                    log.append({'step': i, 'action': 'Генерація', 'status': 'error', 'error': str(e)})
+                    consecutive_fails += 1
+                    if consecutive_fails >= 2:
+                        break
+                    continue
 
                 data, err = _validate_topics_json(raw_gen)
                 if err:
                     log.append({
-                        'step': i,
-                        'action': 'Генерація',
-                        'prompt': current_prompt,
-                        'response': raw_gen,
-                        'error': f'Формат порушено: {err}',
-                        'provider': provider_gen,
+                        'step': i, 'action': 'Генерація', 'status': 'error',
+                        'prompt': current_prompt, 'response': raw_gen,
+                        'error': f'Формат порушено: {err}', 'provider': provider_gen,
                     })
-                    break
+                    consecutive_fails += 1
+                    if consecutive_fails >= 2:
+                        break
+                    continue
 
                 log.append({
-                    'step': i,
-                    'action': 'Генерація',
-                    'prompt': current_prompt,
-                    'response': raw_gen,
+                    'step': i, 'action': 'Генерація', 'status': 'ok',
+                    'prompt': current_prompt, 'response': raw_gen,
                     'provider': provider_gen,
                 })
+                consecutive_fails = 0
 
                 if i < iterations:
                     optimizer_user = (
-                        f"Поточний системний промпт:\n{current_prompt}\n\n"
-                        f"Приклад відповіді (фрагмент):\n{raw_gen[:800]}\n\n"
-                        f"Перепиши САМЕ СИСТЕМНИЙ ПРОМПТ (не відповідь). Поверни ТІЛЬКИ новий текст промпту:"
+                        f"<PROMPT>\n{current_prompt}\n</PROMPT>\n\n"
+                        f"<SAMPLE_OUTPUT>\n{raw_gen[:600]}\n</SAMPLE_OUTPUT>\n\n"
+                        f"Перепиши САМЕ СИСТЕМНИЙ ПРОМПТ (не відповідь). "
+                        f"Поверни ТІЛЬКИ новий текст промпту:"
                     )
 
                     try:
                         new_prompt, provider_opt = call_with_fallback(
                             'critic', SANDBOX_OPTIMIZER_SYSTEM, optimizer_user
                         )
-                    except LLMError as e:
-                        log.append({'step': i, 'action': 'Оновлення промпту', 'error': str(e)})
-                        break
+                    except (LLMError, Exception) as e:
+                        log.append({'step': i, 'action': 'Оновлення промпту', 'status': 'error', 'error': str(e)})
+                        consecutive_fails += 1
+                        if consecutive_fails >= 2:
+                            break
+                        continue
 
                     new_prompt = (new_prompt or '').strip()
 
                     if not new_prompt:
                         log.append({
-                            'step': i,
-                            'action': 'Оновлення промпту',
-                            'error': 'Оптимізатор повернув порожній промпт. Цикл зупинено.',
+                            'step': i, 'action': 'Оновлення промпту', 'status': 'error',
+                            'error': 'Оптимізатор повернув порожній промпт. Ітерацію пропущено.',
                             'provider': provider_opt,
                         })
-                        break
+                        consecutive_fails += 1
+                        if consecutive_fails >= 2:
+                            break
+                        continue
 
+                    # Якщо повернув JSON — одна повторна спроба
                     if _looks_like_topics_json(new_prompt):
-                        log.append({
-                            'step': i,
-                            'action': 'Оновлення промпту',
-                            'old_prompt': current_prompt,
-                            'new_prompt': new_prompt,
-                            'error': 'Оптимізатор повернув JSON-відповідь замість промпту. Зміну відхилено.',
-                            'provider': provider_opt,
-                        })
-                        break
+                        retry_user = (
+                            f"<PROMPT>\n{current_prompt}\n</PROMPT>\n\n"
+                            f"<SAMPLE_OUTPUT>\n{raw_gen[:600]}\n</SAMPLE_OUTPUT>\n\n"
+                            f"Ти повернув JSON з темами. Це НЕПРАВИЛЬНО. "
+                            f"Поверни лише текст інструкції (системний промпт), а НЕ JSON."
+                        )
+                        try:
+                            new_prompt, provider_opt = call_with_fallback(
+                                'critic', SANDBOX_OPTIMIZER_SYSTEM, retry_user
+                            )
+                            new_prompt = (new_prompt or '').strip()
+                        except (LLMError, Exception):
+                            new_prompt = ''
+
+                        if not new_prompt or _looks_like_topics_json(new_prompt):
+                            log.append({
+                                'step': i, 'action': 'Оновлення промпту', 'status': 'error',
+                                'old_prompt': current_prompt, 'new_prompt': new_prompt,
+                                'error': 'Оптимізатор повторно повернув JSON замість промпту. Ітерацію пропущено.',
+                                'provider': provider_opt,
+                            })
+                            consecutive_fails += 1
+                            if consecutive_fails >= 2:
+                                break
+                            continue
 
                     if len(new_prompt) < len(current_prompt) * 0.7:
                         log.append({
-                            'step': i,
-                            'action': 'Оновлення промпту',
-                            'old_prompt': current_prompt,
-                            'new_prompt': new_prompt,
-                            'error': f'Новий промпт занадто короткий ({len(new_prompt)} vs {len(current_prompt)} симв.). Зміну відхилено.',
+                            'step': i, 'action': 'Оновлення промпту', 'status': 'error',
+                            'old_prompt': current_prompt, 'new_prompt': new_prompt,
+                            'error': f'Новий промпт занадто короткий ({len(new_prompt)} vs {len(current_prompt)} симв.). Ітерацію пропущено.',
                             'provider': provider_opt,
                         })
-                        break
+                        consecutive_fails += 1
+                        if consecutive_fails >= 2:
+                            break
+                        continue
 
                     log.append({
-                        'step': i,
-                        'action': 'Оновлення промпту',
-                        'old_prompt': current_prompt,
-                        'new_prompt': new_prompt,
+                        'step': i, 'action': 'Оновлення промпту', 'status': 'ok',
+                        'old_prompt': current_prompt, 'new_prompt': new_prompt,
                         'provider': provider_opt,
                     })
                     current_prompt = new_prompt
+                    consecutive_fails = 0
+
+            ok_count = sum(1 for e in log if e.get('action') == 'Генерація' and e.get('status') == 'ok')
+            err_count = sum(1 for e in log if e.get('status') == 'error')
+            summary_text = f'Успішних генерацій: {ok_count} / Помилок: {err_count} з {iterations} ітерацій'
+            if consecutive_fails >= 2:
+                summary_text += ' | Цикл зупинено: 2 послідовні помилки.'
+            log.append({
+                'step': '—',
+                'action': 'Підсумок',
+                'summary': summary_text,
+            })
 
             if is_ajax:
                 return JsonResponse({'log': log})

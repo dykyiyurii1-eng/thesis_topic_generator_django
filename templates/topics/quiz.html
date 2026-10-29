@@ -72,45 +72,45 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const checkboxes = document.querySelectorAll('.option-checkbox');
-    const progressBar = document.querySelector('#progress-bar');
-    const progressText = document.querySelector('#progress-text');
-    const totalQuestions = document.querySelectorAll('.question-block').length;
+// document.addEventListener('DOMContentLoaded', function() {
+//     const checkboxes = document.querySelectorAll('.option-checkbox');
+//     const progressBar = document.querySelector('#progress-bar');
+//     const progressText = document.querySelector('#progress-text');
+//     const totalQuestions = document.querySelectorAll('.question-block').length;
     
-    function updateProgress() {
-        let answered = 0;
-        document.querySelectorAll('.question-block').forEach(block => {
-            if (block.querySelector('input:checked')) {
-                answered++;
-            }
-        });
+//     function updateProgress() {
+//         let answered = 0;
+//         document.querySelectorAll('.question-block').forEach(block => {
+//             if (block.querySelector('input:checked')) {
+//                 answered++;
+//             }
+//         });
         
-        const percent = (answered / totalQuestions) * 100;
-        progressBar.style.width = percent + '%';
-        progressBar.setAttribute('aria-valuenow', percent);
-        progressText.textContent = answered + ' / ' + totalQuestions;
-    }
+//         const percent = (answered / totalQuestions) * 100;
+//         progressBar.style.width = percent + '%';
+//         progressBar.setAttribute('aria-valuenow', percent);
+//         progressText.textContent = answered + ' / ' + totalQuestions;
+//     }
 
-    checkboxes.forEach(cb => {
-        cb.addEventListener('change', function() {
-            const label = this.closest('label');
-            if (this.checked) {
-                label.classList.add('bg-dark', 'text-white');
-            } else {
-                label.classList.remove('bg-dark', 'text-white');
-            }
-            updateProgress();
-        });
-    });
+//     checkboxes.forEach(cb => {
+//         cb.addEventListener('change', function() {
+//             const label = this.closest('label');
+//             if (this.checked) {
+//                 label.classList.add('bg-dark', 'text-white');
+//             } else {
+//                 label.classList.remove('bg-dark', 'text-white');
+//             }
+//             updateProgress();
+//         });
+//     });
 
-    document.querySelector('#quiz-form')?.addEventListener('submit', function(e) {
-        const answered = document.querySelectorAll('input:checked').length;
-        if (answered === 0) {
-            e.preventDefault();
-            alert('Будь ласка, оберіть хоча б один варіант відповіді.');
-        }
-    });
-});
+//     document.querySelector('#quiz-form')?.addEventListener('submit', function(e) {
+//         const answered = document.querySelectorAll('input:checked').length;
+//         if (answered === 0) {
+//             e.preventDefault();
+//             alert('Будь ласка, оберіть хоча б один варіант відповіді.');
+//         }
+//     });
+// });
 </script>
 {% endblock %}
