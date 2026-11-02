@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-
+# import dj_database_url
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -11,7 +11,8 @@ SECRET_KEY = os.environ.get(
     'django-insecure-default-development-key-change-in-production'
 )
 
-DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 't')
+DEBUG = False
+# DEBUG = os.environ.get('DEBUG', 'false').lower() in ('true', '1', 't')
 
 ALLOWED_HOSTS = ['*']
 
@@ -36,6 +37,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+try:
+    import whitenoise
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+except ImportError:
+    pass
+
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -56,19 +64,39 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME', 'thesis_topics'),
-        'USER': os.getenv('DB_USER', 'thesis_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'thesis_user1234'),
-        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-        'PORT': os.getenv('DB_PORT', '3307'),
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-        },
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL:
+    try:
+       
+        DATABASES = {
+            'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+        }
+    except ImportError:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': os.getenv('DB_NAME', 'thesis_topics'),
+                'USER': os.getenv('DB_USER', 'thesis_user'),
+                'PASSWORD': os.getenv('DB_PASSWORD', 'thesis_user1234'),
+                'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+                'PORT': os.getenv('DB_PORT', '3307'),
+                'OPTIONS': {'charset': 'utf8mb4'},
+            }
+        }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DB_NAME', 'thesis_topics'),
+            'USER': os.getenv('DB_USER', 'thesis_user'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'thesis_user1234'),
+            'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+            'PORT': os.getenv('DB_PORT', '3307'),
+            'OPTIONS': {
+                'charset': 'utf8mb4',
+            },
+        }
     }
-}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -114,3 +142,16 @@ AUTHENTICATION_BACKENDS = [
     'accounts.backends.EmailOrUsernameBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.onrender.com',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
+    if RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)

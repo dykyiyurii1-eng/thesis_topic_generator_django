@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}500 · Помилка сервера{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8 col-lg-6">
+        <div class="card-brutal p-4 p-md-5 position-relative text-center">
+            <span class="tech-index">SYS.ERR // 500_SERVER_ERROR</span>
+            
+            <span class="badge-brutal badge-brutal-black mb-3">ПОМИЛКА 500</span>
+            <h1 class="display-1 fw-bold mb-2" style="font-family: 'Syne'; letter-spacing: -2px;">500</h1>
+            <h2 class="fs-4 fw-bold mb-3">ВНУТРІШНЯ ПОМИЛКА СЕРВЕРА</h2>
+            
+            <p class="font-monospace text-muted small mb-4">
+                Сталася непередбачена технічна помилка на стороні сервера. Ми вже зафіксували проблему в системному лозі.
+            </p>
+
+            <div class="separator"></div>
+
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <a href="{% url 'topics:home' %}" class="btn-brutal btn-brutal-black py-2 px-4">
+                    ← НА ГОЛОВНУ
+                </a>
+                <button type="button" class="btn-brutal py-2 px-4" onclick="window.location.reload();">
+                    СПРОБУВАТИ ЗНОВУ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

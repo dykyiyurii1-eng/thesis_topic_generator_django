@@ -72,3 +72,44 @@ class UserApiKeyIsolationTest(TestCase):
         )
         self.assertEqual(resp.status_code, 404)
 
+
+class AdminActivityAccessTest(TestCase):
+    """Перевірка розмежування доступу до аналітичної адмін-панелі."""
+
+    def setUp(self):
+        self.staff_user = User.objects.create_user('admin_user', password='pass', is_staff=True)
+        self.student_user = User.objects.create_user('student_user', password='pass', is_staff=False)
+
+    def test_anon_redirected_to_admin_login(self):
+        resp = self.client.get(reverse('topics:admin_activity'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/login/', resp.url)
+
+    def test_regular_user_redirected_to_admin_login(self):
+        self.client.force_login(self.student_user)
+        resp = self.client.get(reverse('topics:admin_activity'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/admin/login/', resp.url)
+
+    def test_staff_user_can_access(self):
+        self.client.force_login(self.staff_user)
+        resp = self.client.get(reverse('topics:admin_activity'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'АКТИВНІСТЬ КОРИСТУВАЧІВ')
+        self.assertContains(resp, 'student_user')
+
+
+class CustomErrorPagesTest(TestCase):
+    """Перевірка доступності сторінок кастомних помилок."""
+
+    def test_custom_404_template(self):
+        resp = self.client.get('/404/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'СТОРІНКУ НЕ ЗНАЙДЕНО')
+        self.assertContains(resp, '404')
+
+    def test_custom_500_template(self):
+        resp = self.client.get('/500/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'ВНУТРІШНЯ ПОМИЛКА СЕРВЕРА')
+        self.assertContains(resp, '500')

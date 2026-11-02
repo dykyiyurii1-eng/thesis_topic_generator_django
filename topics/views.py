@@ -614,3 +614,49 @@ def api_key_delete_view(request, key_id):
     key.delete()
     messages.success(request, 'API-ключ видалено.')
     return redirect('topics:api_keys')
+
+
+@staff_member_required
+def admin_activity_view(request):
+    """
+    Аналітична панель активності користувачів (суто для адміністратора).
+    """
+    from django.contrib.auth import get_user_model
+    from .models import UserApiKey
+    
+    User = get_user_model()
+    
+    total_users = User.objects.count()
+    week_ago = timezone.now() - timedelta(days=7)
+    active_users_7d = User.objects.filter(last_login__gte=week_ago).count()
+    total_sessions = GenerationSession.objects.count()
+    total_topics = GeneratedTopic.objects.count()
+    total_byok_keys = UserApiKey.objects.filter(is_valid=True).count()
+    
+    users_list = (
+        User.objects
+        .annotate(
+            sessions_count=Count('sessions', distinct=True),
+            pinned_count=Count('sessions__topics', filter=Q(sessions__topics__is_pinned=True), distinct=True),
+        )
+        .prefetch_related('api_keys')
+        .order_by('-date_joined')
+    )
+    
+    recent_sessions = (
+        GenerationSession.objects
+        .select_related('student')
+        .annotate(topics_count=Count('topics'))
+        .order_by('-created_at')[:25]
+    )
+    
+    context = {
+        'total_users': total_users,
+        'active_users_7d': active_users_7d,
+        'total_sessions': total_sessions,
+        'total_topics': total_topics,
+        'total_byok_keys': total_byok_keys,
+        'users_list': users_list,
+        'recent_sessions': recent_sessions,
+    }
+    return render(request, 'topics/admin_activity.html', context)

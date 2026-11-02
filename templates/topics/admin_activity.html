@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Активність користувачів · Адмін-панель{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 px-3 px-lg-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <span class="tech-index position-static d-block mb-1">SYS.ADMIN // USER_ACTIVITY</span>
+            <h1 class="display-5 fw-bold mb-0">[ АКТИВНІСТЬ КОРИСТУВАЧІВ ]</h1>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/admin/" class="btn-brutal py-2 px-3">
+                DJ-АДМІНКА →
+            </a>
+            <a href="{% url 'topics:sandbox' %}" class="btn-brutal btn-brutal-black py-2 px-3">
+                ПІСОЧНИЦЯ ШІ
+            </a>
+        </div>
+    </div>
+
+    {# ── АГРЕГОВАНІ МЕТРИКИ (METRICS ROW) ── #}
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card-brutal p-3">
+                <span class="tech-index">METRIC.01</span>
+                <div class="small font-monospace text-muted text-uppercase mb-1">КОРИСТУВАЧІ</div>
+                <div class="display-6 fw-bold" style="font-family: 'Syne';">{{ total_users }}</div>
+                <div class="small font-monospace text-muted mt-2 border-top border-dark pt-1">
+                    > АКТИВНИХ ЗА 7 ДНІВ: <strong>{{ active_users_7d }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card-brutal p-3">
+                <span class="tech-index">METRIC.02</span>
+                <div class="small font-monospace text-muted text-uppercase mb-1">СЕСІЇ ГЕНЕРАЦІЙ</div>
+                <div class="display-6 fw-bold" style="font-family: 'Syne';">{{ total_sessions }}</div>
+                <div class="small font-monospace text-muted mt-2 border-top border-dark pt-1">
+                    > ВСЬОГО СТВОРЕНО
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card-brutal p-3">
+                <span class="tech-index">METRIC.03</span>
+                <div class="small font-monospace text-muted text-uppercase mb-1">ЗГЕНЕРОВАНО ТЕМ</div>
+                <div class="display-6 fw-bold" style="font-family: 'Syne';">{{ total_topics }}</div>
+                <div class="small font-monospace text-muted mt-2 border-top border-dark pt-1">
+                    > ЗБЕРЕЖЕНО В БАЗІ
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+            <div class="card-brutal p-3">
+                <span class="tech-index">METRIC.04</span>
+                <div class="small font-monospace text-muted text-uppercase mb-1">BYOK КЛЮЧІ</div>
+                <div class="display-6 fw-bold" style="font-family: 'Syne';">{{ total_byok_keys }}</div>
+                <div class="small font-monospace text-muted mt-2 border-top border-dark pt-1">
+                    > АКТИВНИХ ВЛАСНИХ КЛЮЧІВ
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── ТАБЛИЦЯ КОРИСТУВАЧІВ ── #}
+    <div class="card-brutal p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fs-4 fw-bold mb-0 text-uppercase">Користувачі системи ({{ users_list.count }})</h3>
+            <span class="tech-index position-static">TBL.USERS</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-brutal w-100 mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Користувач</th>
+                        <th>Email</th>
+                        <th>Роль</th>
+                        <th>Реєстрація</th>
+                        <th>Останній вхід</th>
+                        <th>Сесій</th>
+                        <th>📌 Закріплено</th>
+                        <th>BYOK Ключі</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users_list %}
+                    <tr>
+                        <td class="font-monospace">#{{ u.id }}</td>
+                        <td class="fw-bold font-monospace">{{ u.username }}</td>
+                        <td class="small font-monospace">{{ u.email|default:"—" }}</td>
+                        <td>
+                            {% if u.is_superuser %}
+                                <span class="badge-brutal badge-brutal-black">SUPERADMIN</span>
+                            {% elif u.is_staff %}
+                                <span class="badge-brutal badge-brutal-black">STAFF</span>
+                            {% else %}
+                                <span class="badge-brutal badge-brutal-white">STUDENT</span>
+                            {% endif %}
+                        </td>
+                        <td class="small font-monospace">{{ u.date_joined|date:"d.m.Y H:i" }}</td>
+                        <td class="small font-monospace">
+                            {% if u.last_login %}
+                                {{ u.last_login|date:"d.m.Y H:i" }}
+                            {% else %}
+                                <span class="text-muted">Ніколи</span>
+                            {% endif %}
+                        </td>
+                        <td class="font-monospace fw-bold">{{ u.sessions_count }}</td>
+                        <td class="font-monospace fw-bold">{{ u.pinned_count }}</td>
+                        <td>
+                            {% with active_keys=u.api_keys.all %}
+                                {% if active_keys %}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for k in active_keys %}
+                                            <span class="badge-brutal {% if k.is_valid %}badge-brutal-black{% else %}badge-brutal-white{% endif %}" title="•••• {{ k.last4 }}">
+                                                {{ k.get_provider_display }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted small font-monospace">—</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center font-monospace py-4 text-muted">
+                            КОРИСТУВАЧІВ НЕ ЗНАЙДЕНО
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# ── ОСТАННІ ГЕНЕРАЦІЇ ── #}
+    <div class="card-brutal p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fs-4 fw-bold mb-0 text-uppercase">Останні сесії генерації ({{ recent_sessions.count }})</h3>
+            <span class="tech-index position-static">TBL.RECENT_LOGS</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-brutal w-100 mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Студент</th>
+                        <th>Спеціальність</th>
+                        <th>Заклад / Рівень</th>
+                        <th>Кіл</th>
+                        <th>Тем</th>
+                        <th>Статус</th>
+                        <th>Дата</th>
+                        <th>Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in recent_sessions %}
+                    <tr>
+                        <td class="font-monospace">#{{ s.id }}</td>
+                        <td class="font-monospace">
+                            {% if s.student %}
+                                <strong>{{ s.student.username }}</strong>
+                            {% else %}
+                                <span class="text-muted">[ Гість ]</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-bold">{{ s.specialty }}</td>
+                        <td class="small">{{ s.get_institution_type_display }} {% if s.level %}/ {{ s.level }}{% endif %}</td>
+                        <td class="font-monospace">{{ s.rounds }}</td>
+                        <td class="font-monospace fw-bold">{{ s.topics_count }}</td>
+                        <td>
+                            {% if s.status == 'done' %}
+                                <span class="badge-brutal badge-brutal-black">ГОТОВО</span>
+                            {% elif s.status == 'error' %}
+                                <span class="badge-brutal badge-brutal-white">ПОМИЛКА</span>
+                            {% else %}
+                                <span class="badge-brutal badge-brutal-white">В ПРОЦЕСІ</span>
+                            {% endif %}
+                        </td>
+                        <td class="small font-monospace">{{ s.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'topics:session_detail' s.id %}" class="btn-brutal py-1 px-2" style="font-size: 0.75rem;">
+                                    ДЕТАЛІ
+                                </a>
+                                <a href="{% url 'topics:debate_page' s.id %}" class="btn-brutal py-1 px-2" style="font-size: 0.75rem;">
+                                    ДЕБАТИ
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center font-monospace py-4 text-muted">
+                            СЕСІЙ ЩЕ НЕ БУЛО
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+

@@ -1,3 +1,4 @@
+from django.shortcuts import render
 from django.urls import path
 from . import views
 
@@ -22,4 +23,7 @@ urlpatterns = [
     path('sandbox/', views.sandbox_view, name='sandbox'),
     path('api-keys/', views.api_keys_view, name='api_keys'),
     path('api-keys/<int:key_id>/delete/', views.api_key_delete_view, name='api_key_delete'),
+    path('admin-panel/activity/', views.admin_activity_view, name='admin_activity'),
+    path('404/', lambda request: render(request, '404.html')),
+    path('500/', lambda request: render(request, '500.html')),
 ]
