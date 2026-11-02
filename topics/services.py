@@ -97,7 +97,8 @@ def run_debate_pipeline(session, round_no, selected_topic_id=None):
     yield sse(type='status', text=f'Генератор пише... (коло {round_no} з {session.rounds})')
     try:
         raw, provider = call_with_fallback(
-            'generator', GENERATOR_SYSTEM, build_generator_input(ctx)
+            'generator', GENERATOR_SYSTEM, build_generator_input(ctx),
+            user_obj=session.student,
         )
         data = parse_json_response(raw)
     except LLMError as e:
@@ -135,7 +136,8 @@ def run_debate_pipeline(session, round_no, selected_topic_id=None):
     for_critic = [{'id': t.topic_key, 'title': t.title, 'why': t.why} for t in saved]
     try:
         raw, provider = call_with_fallback(
-            'critic', CRITIC_SYSTEM, build_critic_input(ctx, for_critic)
+            'critic', CRITIC_SYSTEM, build_critic_input(ctx, for_critic),
+            user_obj=session.student,
         )
         data = parse_json_response(raw)
     except LLMError as e:
@@ -163,7 +165,8 @@ def run_debate_pipeline(session, round_no, selected_topic_id=None):
     ]
     try:
         raw, provider = call_with_fallback(
-            'judge', JUDGE_SYSTEM, build_judge_input(ctx, for_judge)
+            'judge', JUDGE_SYSTEM, build_judge_input(ctx, for_judge),
+            user_obj=session.student,
         )
         data = parse_json_response(raw)
     except LLMError as e:

@@ -61,7 +61,6 @@ h1, h2, h3, h4, .brand-logo {
     border-radius: var(--radius);
     background: var(--pure-white);
     padding: 2rem;
-    height: 100%;
     position: relative;
     transition: transform 0.15s, box-shadow 0.15s;
 }
@@ -188,7 +187,7 @@ h1, h2, h3, h4, .brand-logo {
     padding-bottom: 5px;
 }
 .quiz-option-text {
-    font-size: 1.15rem;
+    font-size: 10rem;
     line-height: 1.5;
 }
 .option-label:hover {
@@ -246,7 +245,7 @@ html { scroll-behavior: smooth; }
     margin-left: 2px;
     animation: cursor-blink 1s steps(1) infinite;
 }
-
+.progress { display: none; }
 .navbar .nav-link {
     transition: all 0.15s ease;
     padding: 4px 8px;
@@ -418,4 +417,92 @@ html.invert .dropdown-item:hover,
 html.invert .dropdown-item:focus {
     background-color: #fff !important;
     color: #000 !important;
+}
+
+/* === NEO-BRUTALIST EXTENSIONS === */
+.badge-brutal {
+    border: var(--border-style);
+    border-radius: var(--radius);
+    padding: 0.2rem 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-block;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+}
+.badge-brutal-black {
+    background: var(--pure-black);
+    color: var(--pure-white);
+}
+.badge-brutal-white {
+    background: var(--pure-white);
+    color: var(--pure-black);
+}
+
+.alert-brutal {
+    border: 2px solid var(--pure-black);
+    border-radius: var(--radius);
+    background: var(--pure-white);
+    color: var(--pure-black);
+    font-family: 'JetBrains Mono', monospace;
+    padding: 1rem 1.25rem;
+    box-shadow: 4px 4px 0 var(--pure-black);
+    font-weight: 700;
+}
+.alert-brutal-danger {
+    border-left: 8px solid var(--pure-black);
+}
+
+.table-brutal {
+    border: 2px solid var(--pure-black) !important;
+    font-family: 'JetBrains Mono', monospace;
+    border-collapse: collapse;
+}
+.table-brutal thead th {
+    background: var(--pure-black) !important;
+    color: var(--pure-white) !important;
+    border: 1px solid var(--pure-black) !important;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    padding: 0.75rem 1rem;
+    letter-spacing: 0.5px;
+}
+.table-brutal tbody td {
+    border: 1px solid var(--pure-black) !important;
+    background: var(--pure-white) !important;
+    color: var(--pure-black) !important;
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+}
+
+.modal-brutal {
+    border: 2px solid var(--pure-black) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: 8px 8px 0 var(--pure-black) !important;
+    background: var(--pure-white) !important;
+    color: var(--pure-black) !important;
+}
+.modal-brutal .modal-header,
+.modal-brutal .modal-footer {
+    border-color: var(--pure-black) !important;
+}
+
+.nav-tabs-brutal {
+    border-bottom: 2px solid var(--pure-black) !important;
+}
+.nav-tabs-brutal .nav-link {
+    border: 1px solid var(--pure-black) !important;
+    border-bottom: none !important;
+    border-radius: var(--radius) var(--radius) 0 0 !important;
+    color: var(--pure-black) !important;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    margin-right: 4px;
+    background: var(--pure-white);
+}
+.nav-tabs-brutal .nav-link.active {
+    background: var(--pure-black) !important;
+    color: var(--pure-white) !important;
 }

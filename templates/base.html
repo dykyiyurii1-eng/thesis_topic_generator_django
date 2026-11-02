@@ -34,6 +34,7 @@
                             <a class="nav-link font-monospace fw-bold text-danger" href="{% url 'topics:sandbox' %}">[ ПІСОЧНИЦЯ ]</a>
                             <a class="nav-link font-monospace fw-bold text-danger" href="/admin/">[ АДМІНКА ]</a>
                         {% endif %}
+                        <a class="nav-link font-monospace fw-bold text-dark" href="{% url 'topics:api_keys' %}">[ Мої ключі ]</a>
                         <span class="nav-link text-muted font-monospace mb-0">{{ user.username }}</span>
                         <form action="{% url 'accounts:logout' %}" method="post" class="d-flex m-0">
                             {% csrf_token %}
@@ -52,7 +53,12 @@
     <main class="container py-4 flex-grow-1">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-info rounded-0 border-dark mb-4">{{ message }}</div>
+                <div class="alert-brutal {% if 'error' in message.tags or 'danger' in message.tags %}alert-brutal-danger{% endif %} mb-4 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="badge-brutal badge-brutal-black me-2">[ MSG ]</span>
+                        {{ message }}
+                    </div>
+                </div>
             {% endfor %}
         {% endif %}
 

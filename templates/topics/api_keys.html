@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Мої API-ключі · THESIS_GEN{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9 col-xl-8">
+
+    {# ── ЗАГОЛОВОК + КНОПКА ПОЯСНЕННЯ ── #}
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+      <div>
+        <span class="tech-index position-static d-block mb-1">BYOK.01 // KEYS</span>
+        <h1 class="display-5 fw-bold mb-0">[ МОЇ API-КЛЮЧІ ]</h1>
+      </div>
+      <button type="button" class="btn-brutal py-2 px-3"
+              data-bs-toggle="modal" data-bs-target="#trustModal">
+        ? ЯК ЦЕ ПРАЦЮЄ
+      </button>
+    </div>
+
+    {# ══════════════ МОДАЛЬНЕ ВІКНО (BRUTALIST) ══════════════ #}
+    <div class="modal fade" id="trustModal" tabindex="-1" aria-labelledby="trustModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content modal-brutal">
+          <div class="modal-header d-flex justify-content-between align-items-center">
+            <h5 class="modal-title font-monospace fw-bold mb-0" id="trustModalLabel">
+              [ ВСЕ ПРО ВЛАСНІ API-КЛЮЧІ ]
+            </h5>
+            <button type="button" class="win-btn fs-5 px-2 py-0" data-bs-dismiss="modal" aria-label="Закрити">[ × ]</button>
+          </div>
+
+          <div class="modal-body p-0">
+            {# Брутальні вкладки #}
+            <ul class="nav nav-tabs-brutal px-3 pt-3" id="trustTabs" role="tablist">
+              <li class="nav-item">
+                <button class="nav-link active" id="tab-where"
+                        data-bs-toggle="tab" data-bs-target="#where" type="button">
+                  01. ДЕ ВЗЯТИ КЛЮЧ
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link" id="tab-trust"
+                        data-bs-toggle="tab" data-bs-target="#trust" type="button">
+                  02. ЧОМУ МОЖНА ДОВІРЯТИ
+                </button>
+              </li>
+            </ul>
+
+            <div class="tab-content p-4">
+
+              {# ── ВКЛАДКА 1: ДЕ ВЗЯТИ КЛЮЧ ── #}
+              <div class="tab-pane fade show active" id="where" role="tabpanel">
+                <p class="font-monospace small mb-4">
+                  API-ключ — це персональний цифровий пропуск до нейромережі.
+                  Ви безкоштовно створюєте його на офіційному сайті провайдера, копіюєте та вставляєте сюди.
+                </p>
+
+                {# Gemini #}
+                <div class="card-brutal p-3 mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="font-monospace fw-bold mb-0">
+                      [1] GOOGLE GEMINI
+                    </h6>
+                    <span class="badge-brutal badge-brutal-black">РЕКОМЕНДОВАНО</span>
+                  </div>
+                  <ol class="mb-2 small font-monospace ps-3">
+                    <li>Перейдіть на <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="text-dark fw-bold text-decoration-underline">aistudio.google.com/app/apikey</a></li>
+                    <li>Увійдіть під своїм звичайним Google-акаунтом</li>
+                    <li>Натисніть <strong>«Create API key»</strong></li>
+                    <li>Скопіюйте згенерований рядок (починається з <code>AIzaSy...</code>)</li>
+                    <li>Вставте у форму нижче та виберіть <strong>Gemini</strong></li>
+                  </ol>
+                  <div class="small font-monospace text-muted mt-2 border-top border-dark pt-2">
+                    > БЕЗКОШТОВНИЙ ЛІМІТ: ~1500 запитів/день.
+                  </div>
+                </div>
+
+                {# Groq #}
+                <div class="card-brutal p-3 mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="font-monospace fw-bold mb-0">
+                      [2] GROQ
+                    </h6>
+                    <span class="badge-brutal badge-brutal-white">НАЙШВИДШИЙ</span>
+                  </div>
+                  <ol class="mb-2 small font-monospace ps-3">
+                    <li>Відкрийте <a href="https://console.groq.com/keys" target="_blank" rel="noopener" class="text-dark fw-bold text-decoration-underline">console.groq.com/keys</a></li>
+                    <li>Авторизуйтесь (Google, GitHub або Email)</li>
+                    <li>Натисніть <strong>«Create API Key»</strong></li>
+                    <li>Скопіюйте ключ (починається з <code>gsk_...</code>)</li>
+                    <li>Вставте у форму нижче та виберіть <strong>Groq</strong></li>
+                  </ol>
+                  <div class="small font-monospace text-muted mt-2 border-top border-dark pt-2">
+                    > БЕЗКОШТОВНИЙ ЛІМІТ: 14 400 запитів/день.
+                  </div>
+                </div>
+
+                {# OpenRouter #}
+                <div class="card-brutal p-3 mb-3">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="font-monospace fw-bold mb-0">
+                      [3] OPENROUTER
+                    </h6>
+                    <span class="badge-brutal badge-brutal-white">100+ МОДЕЛЕЙ</span>
+                  </div>
+                  <ol class="mb-2 small font-monospace ps-3">
+                    <li>Відкрийте <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" class="text-dark fw-bold text-decoration-underline">openrouter.ai/keys</a></li>
+                    <li>Увійдіть та створіть ключ через <strong>«Create Key»</strong></li>
+                    <li>Скопіюйте ключ (починається з <code>sk-or-v1-...</code>)</li>
+                    <li>Вставте у форму та виберіть <strong>OpenRouter</strong></li>
+                  </ol>
+                  <div class="small font-monospace text-muted mt-2 border-top border-dark pt-2">
+                    > ПІДТРИМКА БЕЗКОШТОВНИХ МОДЕЛЕЙ (Llama, Mistral тощо).
+                  </div>
+                </div>
+
+                <div class="alert-brutal small">
+                  ⚠️ <strong>УВАГА:</strong> Ніколи не передавайте свій ключ стороннім особам.
+                  Ви можете анулювати його на сайті провайдера у будь-яку секунду.
+                </div>
+              </div>
+
+              {# ── ВКЛАДКА 2: ЧОМУ ДОВІРЯТИ ── #}
+              <div class="tab-pane fade" id="trust" role="tabpanel">
+
+                <p class="font-monospace small mb-4">
+                  Ми ставимося до ваших ключів як до паролів. Пояснюємо технічну реалізацію без маркетингових вигадок:
+                </p>
+
+                <div class="card-brutal p-3 mb-3">
+                  <div class="d-flex gap-3 align-items-start">
+                    <span class="badge-brutal badge-brutal-black fs-6">01</span>
+                    <div>
+                      <h6 class="fw-bold font-monospace mb-1">ШИФРУВАННЯ НА БОЦІ СЕРВЕРА</h6>
+                      <p class="small font-monospace mb-0">
+                        Ключ ніколи не зберігається відкритим текстом. Він миттєво шифрується алгоритмом
+                        <strong>Fernet (AES-128-CBC)</strong>. Навіть при прямому читанні бази даних видно лише зашифрований хеш.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card-brutal p-3 mb-3">
+                  <div class="d-flex gap-3 align-items-start">
+                    <span class="badge-brutal badge-brutal-black fs-6">02</span>
+                    <div>
+                      <h6 class="fw-bold font-monospace mb-1">НУЛЬОВИЙ ВИВІД У БРАУЗЕР</h6>
+                      <p class="small font-monospace mb-0">
+                        Повний ключ ніколи не рендериться в HTML, JSON-відповіді або логи сервера.
+                        У інтерфейсі показуються лише останні 4 символи (наприклад, <code>•••• 9xKm</code>).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card-brutal p-3 mb-3">
+                  <div class="d-flex gap-3 align-items-start">
+                    <span class="badge-brutal badge-brutal-black fs-6">03</span>
+                    <div>
+                      <h6 class="fw-bold font-monospace mb-1">ІЗОЛЯЦІЯ ДЛЯ ВАШИХ СЕСІЙ</h6>
+                      <p class="small font-monospace mb-0">
+                        Ключ підтягується виключно при генераціях тем вашого акаунту. Жоден інший користувач
+                        чи адміністратор не може скористатися вашим лімітом.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card-brutal p-3 mb-3">
+                  <div class="d-flex gap-3 align-items-start">
+                    <span class="badge-brutal badge-brutal-black fs-6">04</span>
+                    <div>
+                      <h6 class="fw-bold font-monospace mb-1">ПОВНИЙ КОНТРОЛЬ ТА ВИДАЛЕННЯ</h6>
+                      <p class="small font-monospace mb-0">
+                        В один клік ключ безповоротно видаляється з бази даних, після чого система переходить
+                        на загальні резервні ключі сервера.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="alert-brutal small">
+                  🤝 <strong>ЧЕСНО:</strong> Ми не стверджуємо «100% захист», бо в комп'ютерній безпеці такого не існує.
+                  Якщо ви не бажаєте додавати ключ — не додавайте, система продовжить працювати на загальному ліміті.
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn-brutal btn-brutal-black py-2 px-4" data-bs-dismiss="modal">
+              [ ЗРОЗУМІЛО ]
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {# ══════════════ КІНЕЦЬ МОДАЛІ ══════════════ #}
+
+    {# ── ІНФОРМАЦІЙНИЙ БЛОК БРУТАЛ ── #}
+    <div class="card-brutal p-4 mb-4 position-relative">
+      <span class="tech-index">SYS.SECURITY // FERNET_ENCRYPTED</span>
+      <h6 class="font-monospace fw-bold mb-3 text-uppercase">> БЕЗПЕКА ВАШОГО API-КЛЮЧА</h6>
+      <ul class="mb-0 small font-monospace ps-3">
+        <li>Шифрується алгоритмом <strong>Fernet (AES-128-CBC)</strong> до збереження в базу.</li>
+        <li>Повний ключ <strong>ніколи не потрапляє в браузер, логи чи стороннім</strong>.</li>
+        <li>Використовується суто для <strong>ваших генерацій</strong> та розширює денний ліміт (до 50).</li>
+        <li>Ви можете <strong>видалити ключ у будь-який момент</strong> в один клік.</li>
+      </ul>
+    </div>
+
+    {# ── ТАБЛИЦЯ ІСНУЮЧИХ КЛЮЧІВ ── #}
+    <div class="card-brutal p-4 mb-4">
+      <span class="tech-index">SYS.STORAGE // ACTIVE</span>
+      <h5 class="fw-bold font-monospace mb-3 text-uppercase">Збережені ключі</h5>
+
+      {% if keys %}
+      <div class="table-responsive">
+        <table class="table table-brutal w-100 mb-0">
+          <thead>
+            <tr>
+              <th>Провайдер</th>
+              <th>Маска ключа</th>
+              <th>Створено</th>
+              <th>Останнє використання</th>
+              <th>Статус</th>
+              <th>Дія</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for key in keys %}
+            <tr>
+              <td class="fw-bold">{{ key.get_provider_display }}</td>
+              <td class="font-monospace text-muted">{{ key.masked_key }}</td>
+              <td class="small">{{ key.created_at|date:"d.m.Y H:i" }}</td>
+              <td class="small">
+                {% if key.last_used_at %}
+                  {{ key.last_used_at|date:"d.m.Y H:i" }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if key.is_valid %}
+                  <span class="badge-brutal badge-brutal-black">АКТИВНИЙ</span>
+                {% else %}
+                  <span class="badge-brutal badge-brutal-white border-dark">НЕДІЙСНИЙ</span>
+                {% endif %}
+              </td>
+              <td>
+                <form method="post" action="{% url 'topics:api_key_delete' key.id %}"
+                      onsubmit="return confirm('Видалити ключ для {{ key.get_provider_display }}?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-brutal py-1 px-2" style="font-size: 0.75rem;">
+                    ✕ ВИДАЛИТИ
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-3 border border-dark text-center font-monospace text-muted small">
+        НЕМАЄ ЗБЕРЕЖЕНИХ КЛЮЧІВ. СИСТЕМА ПРАЦЮЄ НА СЕРВЕРНОМУ ЛІМІТІ.
+      </div>
+      {% endif %}
+    </div>
+
+    {# ── ФОРМА ДОДАВАННЯ КЛЮЧА ── #}
+    <div class="card-brutal p-4 mb-4">
+      <span class="tech-index">SYS.INPUT // NEW_KEY</span>
+      <h5 class="fw-bold font-monospace mb-3 text-uppercase">Додати або оновити ключ</h5>
+
+      {% if error %}
+      <div class="alert-brutal alert-brutal-danger mb-3 font-monospace small">
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="post" autocomplete="off">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label font-monospace fw-bold text-uppercase">1. Виберіть провайдера</label>
+          {{ form.provider }}
+          {% if form.provider.errors %}
+            <div class="text-danger small font-monospace mt-1">{{ form.provider.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label font-monospace fw-bold text-uppercase">2. Введіть API-ключ</label>
+          {{ form.api_key }}
+          {% if form.api_key.errors %}
+            <div class="text-danger small font-monospace mt-1">{{ form.api_key.errors }}</div>
+          {% endif %}
+          <div class="small font-monospace text-muted mt-2">
+            > Ключ автоматично тестується дешевим пінг-запитом до API перед збереженням.
+          </div>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert-brutal alert-brutal-danger mb-3 font-monospace small">
+          {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+
+        <button type="submit" class="btn-brutal btn-brutal-black w-100 mt-2">
+          [ ЗБЕРЕГТИ КЛЮЧ ] →
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

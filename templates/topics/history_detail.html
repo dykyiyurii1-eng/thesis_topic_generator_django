@@ -1,36 +1,112 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ session.specialty }} · Деталі сесії{% endblock %}
+
 {% block content %}
-<a href="{% url 'topics:history' %}">← До історії</a>
-<h1 class="h3 mt-2">{{ session.specialty }}</h1>
-<p class="text-muted">
-  {{ session.get_institution_type_display }} · {{ session.get_work_type_display }} ·
-  {{ session.created_at|date:"d.m.Y H:i" }} · {{ session.get_status_display }}
-</p>
+<div class="container py-3">
 
-<p>
-  Інтереси:
-  {% for i in session.interests.all %}
-    <span class="badge bg-secondary">{{ i.name }}</span>
-  {% empty %}не вказано{% endfor %}
-</p>
-
-<h2 class="h5">Теми</h2>
-{% for t in session.topics.all %}
-  <div class="card mb-2">
-    <div class="card-body">
-      <div class="fw-bold">
-        {{ t.title }}
-        {% if t.is_pinned %}📌{% endif %}
-      </div>
-      <div class="small text-muted">
-        Коло {{ t.round }} · {{ t.get_difficulty_display }}
-        {% if t.score %}· оцінка {{ t.score }}{% endif %}
-      </div>
-      <p class="mb-1">{{ t.why }}</p>
-      {% if t.critic_comment %}<p class="small mb-0"><b>Критик:</b> {{ t.critic_comment }}</p>{% endif %}
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <a href="{% url 'topics:history' %}" class="btn-brutal py-2 px-3 text-decoration-none">
+            ← ДО ІСТОРІЇ
+        </a>
+        <div class="d-flex gap-2">
+            <a href="{% url 'topics:debate_page' session.id %}" class="btn-brutal btn-brutal-black py-2 px-3 text-decoration-none">
+                ДО ДЕБАТІВ →
+            </a>
+            <a href="{% url 'topics:send_email' session.id %}" class="btn-brutal py-2 px-3 text-decoration-none">
+                НА EMAIL
+            </a>
+        </div>
     </div>
-  </div>
-{% empty %}
-  <p class="text-muted">Тем немає.</p>
-{% endfor %}
+
+    {# ── ГОЛОВНА КАРТКА СЕСІЇ ── #}
+    <div class="card-brutal p-4 p-md-5 mb-4 position-relative">
+        <span class="tech-index">SYS.HIST // SESSION #{{ session.id }}</span>
+        
+        <div class="small font-monospace text-muted mb-2">
+            СЕАНС ВІД {{ session.created_at|date:"d.m.Y H:i" }} // СТАТУС: {{ session.get_status_display|upper }}
+        </div>
+
+        <h1 class="display-4 fw-bold mb-4" style="line-height: 1.1;">
+            {{ session.specialty }}
+        </h1>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <span class="badge-brutal badge-brutal-black">{{ session.get_institution_type_display }}</span>
+            <span class="badge-brutal badge-brutal-black">{{ session.get_work_type_display }}</span>
+            <span class="badge-brutal badge-brutal-white">КІЛ ДЕБАТІВ: {{ session.rounds }}</span>
+            {% if session.level %}
+                <span class="badge-brutal badge-brutal-white">{{ session.level }}</span>
+            {% endif %}
+        </div>
+
+        <div class="separator"></div>
+
+        <div>
+            <div class="fw-bold font-monospace small mb-2 text-uppercase">Академічні інтереси:</div>
+            <div class="d-flex flex-wrap gap-2">
+                {% for i in session.interests.all %}
+                    <span class="badge-brutal badge-brutal-white">{{ i.name }}</span>
+                {% empty %}
+                    <span class="text-muted font-monospace small">Не вказано</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {# ── СПИСОК СФОРМОВАНИХ ТЕМ ── #}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="display-6 fw-bold mb-0">ЗГЕНЕРОВАНІ ТЕМИ ({{ session.topics.count }})</h2>
+    </div>
+
+    <div class="row g-3">
+        {% for t in session.topics.all %}
+            <div class="col-12">
+                <div class="card-brutal p-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
+                        <h3 class="fs-4 fw-bold mb-0 flex-grow-1">
+                            {{ forloop.counter }}. {{ t.title }}
+                        </h3>
+                        <div class="d-flex gap-2 align-items-center">
+                            {% if t.is_pinned %}
+                                <span class="badge-brutal badge-brutal-black">📌 ЗАКРІПЛЕНО</span>
+                            {% endif %}
+                            {% if t.score %}
+                                <span class="badge-brutal badge-brutal-black fs-6 py-1 px-2">
+                                    {{ t.score }}/100
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 my-3">
+                        <span class="badge-brutal badge-brutal-white">КОЛО {{ t.round }}</span>
+                        <span class="badge-brutal badge-brutal-white">{{ t.get_difficulty_display|upper }}</span>
+                    </div>
+
+                    {% if t.why %}
+                        <p class="mb-3 font-monospace" style="font-size: 0.95rem;">
+                            {{ t.why }}
+                        </p>
+                    {% endif %}
+
+                    {% if t.critic_comment %}
+                        <div class="border border-dark p-3 bg-white font-monospace small mt-2">
+                            <span class="fw-bold text-uppercase">[ Критик ШІ ]:</span>
+                            <div class="mt-1">{{ t.critic_comment }}</div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="card-brutal p-5 text-center font-monospace text-muted">
+                    В ЦІЙ СЕСІЇ НЕМАЄ ЗБЕРЕЖЕНИХ ТЕМ
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
 {% endblock %}

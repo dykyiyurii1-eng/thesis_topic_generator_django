@@ -55,3 +55,18 @@ from .models import HomePageImage
 class HomePageImageAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'is_active')
     list_filter = ('is_active',)
+
+
+from .models import UserApiKey
+
+@admin.register(UserApiKey)
+class UserApiKeyAdmin(admin.ModelAdmin):
+    list_display = ('user', 'provider', 'masked_key_display', 'is_valid', 'created_at', 'last_used_at')
+    list_filter = ('provider', 'is_valid')
+    search_fields = ('user__username',)
+    readonly_fields = ('masked_key_display', 'created_at', 'last_used_at')
+    exclude = ('encrypted_key',)  # Повний ключ ніколи не показується в адмінці
+
+    def masked_key_display(self, obj):
+        return obj.masked_key
+    masked_key_display.short_description = 'API-ключ'

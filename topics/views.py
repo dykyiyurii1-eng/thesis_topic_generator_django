@@ -255,7 +255,8 @@ def sandbox_view(request):
                 # ── ГЕНЕРАЦІЯ ──
                 try:
                     raw_gen, provider_gen = call_with_fallback(
-                        'generator', current_prompt, build_generator_input(ctx)
+                        'generator', current_prompt, build_generator_input(ctx),
+                        user_obj=request.user,
                     )
                 except (LLMError, Exception) as e:
                     log.append({'step': i, 'action': 'Генерація', 'status': 'error', 'error': str(e)})
@@ -293,7 +294,8 @@ def sandbox_view(request):
 
                     try:
                         new_prompt, provider_opt = call_with_fallback(
-                            'critic', SANDBOX_OPTIMIZER_SYSTEM, optimizer_user
+                            'critic', SANDBOX_OPTIMIZER_SYSTEM, optimizer_user,
+                            user_obj=request.user,
                         )
                     except (LLMError, Exception) as e:
                         log.append({'step': i, 'action': 'Оновлення промпту', 'status': 'error', 'error': str(e)})
@@ -325,7 +327,8 @@ def sandbox_view(request):
                         )
                         try:
                             new_prompt, provider_opt = call_with_fallback(
-                                'critic', SANDBOX_OPTIMIZER_SYSTEM, retry_user
+                                'critic', SANDBOX_OPTIMIZER_SYSTEM, retry_user,
+                                user_obj=request.user,
                             )
                             new_prompt = (new_prompt or '').strip()
                         except (LLMError, Exception):
@@ -408,8 +411,11 @@ class SessionCreateView(LoginRequiredMixin, CreateView):
             since = timezone.now() - timedelta(days=1)
             used = GenerationSession.objects.filter(
                 student=request.user, created_at__gte=since).count()
-            if used >= 10:
-                messages.error(request, 'Ліміт 10 генерацій на добу вичерпано.')
+            from .models import UserApiKey
+            has_own_key = UserApiKey.objects.filter(user=request.user, is_valid=True).exists()
+            limit = 50 if has_own_key else 10
+            if used >= limit:
+                messages.error(request, 'Ліміт генерацій на сьогодні вичерпано.')
                 return redirect('topics:history')
         return super().dispatch(request, *args, **kwargs)
 
@@ -545,3 +551,66 @@ class SessionDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_queryset(self):
         return GenerationSession.objects.filter(student=self.request.user)
+
+
+@login_required
+def api_keys_view(request):
+    """Список власних API-ключів + форма додавання (з rate limiting)."""
+    from django.core.cache import cache
+    from .forms import UserApiKeyForm
+    from .models import UserApiKey
+    from .crypto import encrypt
+
+    keys = UserApiKey.objects.filter(user=request.user)
+    error = None
+    form = UserApiKeyForm()
+
+    if request.method == 'POST':
+        cache_key = f'api_key_add_attempts_{request.user.id}'
+        attempts = cache.get(cache_key, 0)
+        if attempts >= 5:
+            error = (
+                'Перевищено ліміт спроб додавання ключа. '
+                'Спробуйте через годину.'
+            )
+        else:
+            form = UserApiKeyForm(request.POST)
+            if form.is_valid():
+                provider = form.cleaned_data['provider']
+                raw_key = form.cleaned_data['api_key']
+                UserApiKey.objects.update_or_create(
+                    user=request.user,
+                    provider=provider,
+                    defaults={
+                        'encrypted_key': encrypt(raw_key),
+                        'last4': raw_key[-4:],
+                        'is_valid': True,
+                        'last_used_at': None,
+                    }
+                )
+                cache.delete(cache_key)
+                messages.success(
+                    request,
+                    f'Ключ для {dict(UserApiKey.PROVIDER_CHOICES)[provider]} '
+                    f'успішно збережено.',
+                )
+                return redirect('topics:api_keys')
+            else:
+                cache.set(cache_key, attempts + 1, timeout=3600)
+
+    return render(request, 'topics/api_keys.html', {
+        'keys': keys,
+        'form': form,
+        'error': error,
+    })
+
+
+@login_required
+@require_POST
+def api_key_delete_view(request, key_id):
+    """Видалення власного API-ключа."""
+    from .models import UserApiKey
+    key = get_object_or_404(UserApiKey, id=key_id, user=request.user)
+    key.delete()
+    messages.success(request, 'API-ключ видалено.')
+    return redirect('topics:api_keys')

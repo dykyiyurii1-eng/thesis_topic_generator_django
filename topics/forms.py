@@ -1,6 +1,7 @@
 from django import forms
-from .models import GenerationSession
+from .models import GenerationSession, UserApiKey
 from .prompts import GENERATOR_SYSTEM, SANDBOX_GENERATOR_SYSTEM
+from .key_validation import validate_provider_key
 
 
 class GenerationSessionForm(forms.ModelForm):
@@ -31,6 +32,12 @@ class GenerationSessionForm(forms.ModelForm):
                     choices[0] = ('', '- Оберіть варіант -')
                     self.fields[field_name].choices = choices
 
+    def clean_specialty(self):
+        value = self.cleaned_data.get('specialty', '').strip()
+        if len(value) < 3:
+            raise forms.ValidationError('Спеціальність має містити щонайменше 3 символи.')
+        return value
+
 
 class EmailSendForm(forms.Form):
     email = forms.EmailField(
@@ -52,6 +59,7 @@ class SandboxForm(forms.Form):
         }),
         initial=SANDBOX_GENERATOR_SYSTEM,
         label='Системний промпт',
+        validators=[validate_json_mentioned],
     )
     specialty = forms.CharField(
         max_length=200,
@@ -75,4 +83,40 @@ class SandboxForm(forms.Form):
         label='Кількість ітерацій',
         widget=forms.NumberInput(attrs={'class': 'form-control rounded-0 border-dark font-monospace'}),
     )
-    
+
+
+class UserApiKeyForm(forms.Form):
+    provider = forms.ChoiceField(
+        choices=UserApiKey.PROVIDER_CHOICES,
+        label="Провайдер",
+        widget=forms.Select(attrs={'class': 'form-select rounded-0 border-dark font-monospace'})
+    )
+    api_key = forms.CharField(
+        label="API-ключ",
+        widget=forms.PasswordInput(
+            attrs={
+                'class': 'form-control rounded-0 border-dark font-monospace',
+                'placeholder': 'Вставте ваш API-ключ сюди',
+                'autocomplete': 'off',
+            },
+            render_value=False
+        )
+    )
+
+    def clean_api_key(self):
+        key = self.cleaned_data.get('api_key', '').strip()
+        if len(key) < 8:
+            raise forms.ValidationError('API-ключ занадто короткий.')
+        return key
+
+    def clean(self):
+        cleaned_data = super().clean()
+        provider = cleaned_data.get('provider')
+        api_key = cleaned_data.get('api_key')
+
+        if provider and api_key:
+            is_valid, error_msg = validate_provider_key(provider, api_key)
+            if not is_valid:
+                raise forms.ValidationError(error_msg)
+
+        return cleaned_data

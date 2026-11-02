@@ -54,7 +54,7 @@
                                  role="button" data-bs-toggle="collapse" data-bs-target="#srv-step-{{ forloop.counter }}">
                                 <span class="fw-bold">КРОК {{ item.step }}: {{ item.action|upper }}</span>
                                 <span>
-                                    {% if item.provider %}<span class="badge bg-light text-dark rounded-0 ms-2">{{ item.provider }}</span>{% endif %}
+                                    {% if item.provider %}<span class="badge-brutal badge-brutal-white ms-2">{{ item.provider }}</span>{% endif %}
                                     <span class="font-monospace ms-1">[±]</span>
                                 </span>
                             </div>
@@ -90,7 +90,7 @@
                                         <div class="fw-bold text-success fs-6">{{ item.summary }}</div>
                                     {% endif %}
                                     {% if item.error %}
-                                        <div class="alert alert-danger rounded-0 mt-2 mb-0 py-2">ERROR: {{ item.error }}</div>
+                                        <div class="alert-brutal alert-brutal-danger mt-2 mb-0 py-2">ERROR: {{ item.error }}</div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const isGeneration = item.action === 'Генерація';
             const isUpdate = item.action === 'Оновлення промпту';
             const badge = item.provider
-                ? '<span class="badge bg-light text-dark rounded-0 ms-2">' + escapeHtml(item.provider) + '</span>'
+                ? '<span class="badge-brutal badge-brutal-white ms-2">' + escapeHtml(item.provider) + '</span>'
                 : '';
 
             let html = '<div class="mb-3 border border-dark bg-white">';
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (item.error) {
-                html += '<div class="alert alert-danger rounded-0 mt-2 mb-0 py-2">ERROR: '
+                html += '<div class="alert-brutal alert-brutal-danger mt-2 mb-0 py-2">ERROR: '
                       + escapeHtml(item.error) + '</div>';
             }
 

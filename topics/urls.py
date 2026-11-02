@@ -20,4 +20,6 @@ urlpatterns = [
     path('session/<int:pk>/delete/', views.SessionDeleteView.as_view(), name='session_delete'),
     path('session/<int:session_id>/email/', views.send_session_email_view, name='send_email'),
     path('sandbox/', views.sandbox_view, name='sandbox'),
+    path('api-keys/', views.api_keys_view, name='api_keys'),
+    path('api-keys/<int:key_id>/delete/', views.api_key_delete_view, name='api_key_delete'),
 ]

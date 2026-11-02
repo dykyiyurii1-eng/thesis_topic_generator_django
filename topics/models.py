@@ -1,4 +1,4 @@
-﻿from django.db import models
+from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.urls import reverse
@@ -16,8 +16,6 @@ class Interest(models.Model):
     def __str__(self):
         return f"{self.name} ({self.category})"
 
-    def get_absolute_url(self):
-        return reverse('topics:interest_detail', kwargs={'slug': self.slug})
 
 class StudentInterest(models.Model):
     SOURCE_CHOICES = (('quiz', 'Тест'), ('manual', 'Вручну'))
@@ -37,6 +35,7 @@ class StudentInterest(models.Model):
     def __str__(self):
         return f"{self.student.username} - {self.interest.name}"
 
+
 class Question(models.Model):
     text = models.CharField(max_length=255, verbose_name="Текст питання")
     order = models.PositiveIntegerField(default=0, verbose_name="Порядок")
@@ -49,6 +48,7 @@ class Question(models.Model):
     def __str__(self):
         return self.text
 
+
 class Option(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='options', verbose_name="Питання")
     text = models.CharField(max_length=255, verbose_name="Текст варіанту")
@@ -59,6 +59,7 @@ class Option(models.Model):
 
     def __str__(self):
         return f"{self.question.text[:20]}... - {self.text}"
+
 
 class OptionInterest(models.Model):
     option = models.ForeignKey(Option, on_delete=models.CASCADE, related_name='interests', verbose_name="Варіант")
@@ -71,6 +72,7 @@ class OptionInterest(models.Model):
 
     def __str__(self):
         return f"{self.option.text[:15]}... + {self.interest.name}"
+
 
 class GenerationSession(models.Model):
     INSTITUTION_CHOICES = (('school', 'Школа'), ('college', 'Коледж'), ('university', 'Університет'))
@@ -116,6 +118,7 @@ class GenerationSession(models.Model):
     def get_absolute_url(self):
         return reverse('topics:debate_page', kwargs={'session_id': self.pk})
 
+
 class GeneratedTopic(models.Model):
     DIFFICULTY_CHOICES = (('easy', 'Легка'), ('medium', 'Середня'), ('hard', 'Складна'))
     
@@ -145,6 +148,7 @@ class GeneratedTopic(models.Model):
     def get_absolute_url(self):
         return reverse('topics:debate_page', kwargs={'session_id': self.session_id})
 
+
 class AgentMessage(models.Model):
     AGENT_CHOICES = (('generator', 'Генератор'), ('critic', 'Критик'), ('judge', 'Суддя'), ('system', 'Система'), ('user', 'Користувач'))
     session = models.ForeignKey(GenerationSession, on_delete=models.CASCADE, related_name='messages', verbose_name="Сесія")
@@ -165,9 +169,41 @@ class AgentMessage(models.Model):
     def __str__(self):
         return f"{self.get_agent_display()} - {self.session.id}"
 
+
 class HomePageImage(models.Model):
     image = models.ImageField(upload_to='home_images/', verbose_name="Картинка на головну")
     is_active = models.BooleanField(default=True, verbose_name="Активна")
 
     def __str__(self):
         return "Картинка на головну"
+
+
+class UserApiKey(models.Model):
+    PROVIDER_CHOICES = (
+        ('gemini', 'Google Gemini'),
+        ('groq', 'Groq'),
+        ('openrouter', 'OpenRouter'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='api_keys', verbose_name="Користувач")
+    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES, verbose_name="Провайдер")
+    encrypted_key = models.TextField(verbose_name="Зашифрований ключ")
+    last4 = models.CharField(max_length=4, verbose_name="Останні 4 символи")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Створено")
+    last_used_at = models.DateTimeField(null=True, blank=True, verbose_name="Останнє використання")
+    is_valid = models.BooleanField(default=True, verbose_name="Дійсний")
+
+    class Meta:
+        verbose_name = "Власний API-ключ"
+        verbose_name_plural = "Власні API-ключі"
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'provider'], name='unique_user_provider_key')
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_provider_display()} (•••• {self.last4})"
+
+    @property
+    def masked_key(self):
+        return f"•••• •••• •••• {self.last4}"

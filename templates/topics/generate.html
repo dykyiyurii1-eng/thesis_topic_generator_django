@@ -11,7 +11,7 @@
             <h2 class="mb-4">СТВОРЕННЯ НОВОЇ ГЕНЕРАЦІЇ</h2>
             
             {% if form.errors %}
-                <div class="alert alert-danger rounded-0 border-dark">
+                <div class="alert-brutal alert-brutal-danger mb-4">
                     {% for field, errs in form.errors.items %}
                         {% for e in errs %}<div>{{ e }}</div>{% endfor %}
                     {% endfor %}
@@ -65,7 +65,7 @@
                     <label class="form-label fw-bold font-monospace mt-3" for="custom-input">СВОЇ ІНТЕРЕСИ (до 5)</label>
                     <div class="input-group">
                         <input type="text" id="custom-input" class="form-control rounded-0 border-dark font-monospace" maxlength="40" placeholder="Напишіть і натисніть Enter">
-                        <button type="button" id="custom-add" class="btn btn-dark rounded-0 font-monospace">ДОДАТИ</button>
+                        <button type="button" id="custom-add" class="btn-brutal btn-brutal-black py-1 px-3">ДОДАТИ</button>
                     </div>
                     <div id="custom-chips" class="d-flex flex-wrap gap-2 mt-2"></div>
                     <input type="hidden" name="custom_interests" id="id_custom_interests" value="">
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chips.innerHTML = '';
         items.forEach((text, idx) => {
             const badge = document.createElement('span');
-            badge.className = 'badge bg-dark text-white rounded-0 p-2 font-monospace me-2';
+            badge.className = 'badge-brutal badge-brutal-black p-2 font-monospace me-2 mb-2 d-inline-flex align-items-center';
             badge.textContent = `${text} `;
 
             const close = document.createElement('button');
