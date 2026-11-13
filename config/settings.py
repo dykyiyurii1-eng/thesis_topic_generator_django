@@ -2,6 +2,7 @@ import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -11,7 +12,7 @@ SECRET_KEY = os.environ.get(
     'django-insecure-default-development-key-change-in-production'
 )
 
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['*']
 
@@ -63,39 +64,21 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL:
-    try:
-       
-        DATABASES = {
-            'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
-        }
-    except ImportError:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.mysql',
-                'NAME': os.getenv('DB_NAME', 'thesis_topics'),
-                'USER': os.getenv('DB_USER', 'thesis_user'),
-                'PASSWORD': os.getenv('DB_PASSWORD', 'thesis_user1234'),
-                'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-                'PORT': os.getenv('DB_PORT', '3307'),
-                'OPTIONS': {'charset': 'utf8mb4'},
-            }
-        }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.getenv('DB_NAME', 'thesis_topics'),
-            'USER': os.getenv('DB_USER', 'thesis_user'),
-            'PASSWORD': os.getenv('DB_PASSWORD', 'thesis_user1234'),
-            'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-            'PORT': os.getenv('DB_PORT', '3307'),
-            'OPTIONS': {
-                'charset': 'utf8mb4',
-            },
-        }
+_db_options = {'charset': 'utf8mb4'}
+if os.getenv('DB_SSL_CA'):
+    _db_options['ssl'] = {'ca': os.getenv('DB_SSL_CA')}
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.getenv('DB_NAME', 'thesis_topics'),
+        'USER': os.getenv('DB_USER', 'thesis_user'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'thesis_user1234'),
+        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+        'PORT': os.getenv('DB_PORT', '3307'),
+        'OPTIONS': _db_options,
     }
+}
 
 if 'test' in sys.argv:
     DATABASES['default'] = {
