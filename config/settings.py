@@ -70,7 +70,7 @@ if os.getenv('DB_SSL_CA'):
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+    'ENGINE': os.getenv('DB_ENGINE', 'django.db.backends.mysql'),
         'NAME': os.getenv('DB_NAME', 'thesis_topics'),
         'USER': os.getenv('DB_USER', 'thesis_user'),
         'PASSWORD': os.getenv('DB_PASSWORD', 'thesis_user1234'),
