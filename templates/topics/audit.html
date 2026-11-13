@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Аудит теми · THESIS_GEN{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-3">
+    <div class="col-lg-10">
+        <div class="card-brutal p-4 mb-4">
+            <span class="tech-index">SYS.AUDIT // TOPIC_VERIFICATION</span>
+            <h2 class="mb-2">АУДИТ ВЛАСНОЇ ТЕМИ</h2>
+            <p class="text-muted font-monospace small mb-4">
+                Введіть свою тему або робочу назву. ШІ-експерти розберуть її на складові, оцінять новизну, виявлять слабкі місця та підготують рецензію.
+            </p>
+
+            {% if error_message %}
+                <div class="alert-brutal alert-brutal-danger mb-4">
+                    <span class="badge-brutal badge-brutal-black me-2">[ ПОМИЛКА ]</span>
+                    {{ error_message }}
+                </div>
+            {% endif %}
+
+            <form method="post" id="audit-form">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <label class="form-label fw-bold font-monospace">СПЕЦІАЛЬНІСТЬ</label>
+                        <input type="text" name="specialty" class="form-control rounded-0 border-dark font-monospace" 
+                               placeholder="Наприклад: 122 Комп'ютерні науки або Кібербезпека..." required value="{{ form_data.specialty }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold font-monospace">РІВЕНЬ ОСВІТИ</label>
+                        <select name="level" class="form-select rounded-0 border-dark font-monospace">
+                            <option value="Бакалавр" {% if form_data.level == 'Бакалавр' %}selected{% endif %}>Бакалавр</option>
+                            <option value="Магістр" {% if form_data.level == 'Магістр' %}selected{% endif %}>Магістр</option>
+                            <option value="Аспірант / PhD" {% if form_data.level == 'Аспірант / PhD' %}selected{% endif %}>Аспірант / PhD</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold font-monospace">НАЗВА ВАШОЇ ТЕМИ</label>
+                    <input type="text" name="title" class="form-control rounded-0 border-dark font-monospace" 
+                           placeholder="Наприклад: Розробка системи виявлення аномалій у мережевому трафіку з використанням ML..." required value="{{ form_data.title }}">
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold font-monospace">КОРОТКИЙ ОПИС ТА ІДЕЯ (НЕОБОВ'ЯЗКОВО)</label>
+                    <textarea name="description" class="form-control rounded-0 border-dark font-monospace" rows="3" 
+                              placeholder="Опишіть очікуваний результат, інструменти (стек технологій) або чому обрали саме цю тему...">{{ form_data.description }}</textarea>
+                </div>
+
+                <button type="submit" id="audit-submit-btn" class="btn-brutal btn-brutal-black w-100 py-3">
+                    ЗАПУСТИТИ АУДИТ ТЕМИ →
+                </button>
+            </form>
+        </div>
+
+        {% if audit_result %}
+            <div class="card-brutal p-4 mb-4 bg-white" id="audit-results-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="tech-index mb-0">REPORT // AUDIT_SUMMARY</span>
+                    <span class="badge-brutal badge-brutal-white font-monospace small">Провайдер: {{ audit_result.provider|default:"AI Engine" }}</span>
+                </div>
+
+                <div class="alert-brutal mb-4 py-3 px-3 bg-light">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <div class="small font-monospace text-muted">ВЕРДИКТ ЕКСПЕРТНОЇ КОМІСІЇ:</div>
+                            <h4 class="mb-0 fw-bold">{{ audit_result.verdict }}</h4>
+                        </div>
+                        <div class="text-end">
+                            <span class="fs-2 fw-bold font-monospace">{{ audit_result.scores.total|default:"—" }}</span>
+                            <span class="text-muted font-monospace">/10</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card-brutal p-3 text-center bg-white">
+                            <div class="small font-monospace text-muted mb-1">НОВИЗНА</div>
+                            <div class="fs-3 fw-bold font-monospace">{{ audit_result.scores.novelty|default:"—" }}<span class="small text-muted">/10</span></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card-brutal p-3 text-center bg-white">
+                            <div class="small font-monospace text-muted mb-1">РЕАЛІЗОВАНІСТЬ</div>
+                            <div class="fs-3 fw-bold font-monospace">{{ audit_result.scores.feasibility|default:"—" }}<span class="small text-muted">/10</span></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card-brutal p-3 text-center bg-white">
+                            <div class="small font-monospace text-muted mb-1">ВІДПОВІДНІСТЬ</div>
+                            <div class="fs-3 fw-bold font-monospace">{{ audit_result.scores.relevance|default:"—" }}<span class="small text-muted">/10</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="card-brutal p-3 h-100 bg-white">
+                            <h5 class="fw-bold font-monospace mb-3">[ ✓ ] СИЛЬНІ СТОРОНИ</h5>
+                            <ul class="list-unstyled mb-0 font-monospace small">
+                                {% for s in audit_result.strengths %}
+                                    <li class="mb-2 pb-2 border-bottom border-dark">→ {{ s }}</li>
+                                {% empty %}
+                                    <li class="text-muted">Не зазначено</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card-brutal p-3 h-100 bg-white">
+                            <h5 class="fw-bold font-monospace mb-3 text-danger">[ ⚠ ] РИЗИКИ ТА ЗАУВАЖЕННЯ</h5>
+                            <ul class="list-unstyled mb-0 font-monospace small">
+                                {% for r in audit_result.risks %}
+                                    <li class="mb-2 pb-2 border-bottom border-dark text-danger">! {{ r }}</li>
+                                {% empty %}
+                                    <li class="text-muted">Критичних ризиків не виявлено.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {% if audit_result.recommendations %}
+                    <div class="card-brutal p-3 mb-4 bg-white">
+                        <h5 class="fw-bold font-monospace mb-3">[ ⚑ ] МЕТОДОЛОГІЧНИЙ ПАСПОРТ РОБОТИ</h5>
+                        <div class="row g-3 font-monospace small">
+                            <div class="col-md-4">
+                                <span class="badge-brutal badge-brutal-black mb-1">ОБ'ЄКТ</span>
+                                <div>{{ audit_result.recommendations.object|default:"—" }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge-brutal badge-brutal-black mb-1">ПРЕДМЕТ</span>
+                                <div>{{ audit_result.recommendations.subject|default:"—" }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge-brutal badge-brutal-black mb-1">МЕТОДИ</span>
+                                <div>{{ audit_result.recommendations.methods|default:"—" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if audit_result.improved_titles %}
+                    <div class="card-brutal p-3 bg-white">
+                        <h5 class="fw-bold font-monospace mb-3">[ 💡 ] ПОКРАЩЕНІ ВАРІАНТИ ФОРМУЛЮВАННЯ</h5>
+                        <div class="d-flex flex-column gap-3">
+                            {% for imp in audit_result.improved_titles %}
+                                <div class="p-3 border border-dark d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div class="font-monospace fw-bold">{{ imp }}</div>
+                                    <a href="{% url 'topics:generate' %}?specialty={{ form_data.specialty|urlencode }}&keywords={{ imp|urlencode }}" 
+                                       class="btn-brutal btn-brutal-white font-monospace small">
+                                        ВЗЯТИ В ДЕБАТИ →
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('#audit-form');
+    const submitBtn = document.querySelector('#audit-submit-btn');
+
+    if (form && submitBtn) {
+        form.addEventListener('submit', () => {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'ЕКСПЕРТИ АНАЛІЗУЮТЬ ТЕМУ... (ОЧІКУЙТЕ)';
+            submitBtn.style.opacity = '0.7';
+        });
+    }
+
+    const results = document.querySelector('#audit-results-card');
+    if (results) {
+        results.scrollIntoView({ behavior: 'smooth' });
+    }
+});
+</script>
+{% endblock %}

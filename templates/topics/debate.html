@@ -6,16 +6,17 @@
 {% block content %}
 <div class="container-fluid py-3">
     <div class="row mb-3 align-items-center">
-        <div class="col-md-8">
+        <div class="col-md-7">
             <h2 class="mb-0">ДЕБАТИ: {{ session.specialty }}</h2>
             <div class="small text-muted font-monospace">КІЛ: {{ session.rounds }}</div>
         </div>
-        <div class="col-md-4 text-end">
+        <div class="col-md-5 text-end">
             <button id="start-btn" class="btn-brutal btn-brutal-black"
                     data-next-round="{{ next_round }}"
                     data-stream-url="{% url 'topics:debate_stream' session.id %}"
                     data-total-rounds="{{ session.rounds }}"
                     data-pin-url-template="{% url 'topics:pin_topic' 0 %}"
+                    data-like-url-template="{% url 'topics:like_topic' 0 %}"
                     data-csrf="{{ csrf_token }}"
                     {% if finished %}disabled{% endif %}>
                 {% if finished %}ДЕБАТИ ЗАВЕРШЕНО{% else %}ПОЧАТИ КОЛО {{ next_round }}{% endif %}
@@ -24,6 +25,46 @@
                 {% if finished %}ЗАВЕРШЕНО{% else %}ОЧІКУВАННЯ{% endif %}
             </div>
         </div>
+    </div>
+
+    <div class="card-brutal p-3 mb-3 bg-white">
+        <div class="d-flex flex-wrap gap-2 align-items-center font-monospace small">
+            <span class="badge-brutal badge-brutal-black">СПЕЦІАЛЬНІСТЬ</span> <span class="fw-bold">{{ session.specialty }}</span>
+            <span class="badge-brutal badge-brutal-white ms-2">РІВЕНЬ</span> <span>{{ session.get_level_display|default:session.get_institution_type_display }}</span>
+            <span class="badge-brutal badge-brutal-white ms-2">ТИП РОБОТИ</span> <span>{{ session.get_work_type_display }}</span>
+            {% if session.keywords %}
+                <span class="badge-brutal badge-brutal-white ms-2">КЛЮЧОВІ СЛОВА</span> <span>{{ session.keywords }}</span>
+            {% endif %}
+            {% if session.interests.all %}
+                <span class="badge-brutal badge-brutal-black ms-2">ІНТЕРЕСИ</span>
+                {% for i in session.interests.all %}
+                    <span class="badge-brutal badge-brutal-white">{{ i.name }}</span>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="intervention-box" class="card-brutal p-3 mb-3 bg-white {% if finished %}d-none{% endif %}">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="tech-index mb-0">HUMAN // FEEDBACK_LOOP</span>
+            <span class="small font-monospace text-muted">ВКАЗІВКИ ДЛЯ АГЕНТІВ (КОЛО <span id="feedback-round-num">{{ next_round }}</span>)</span>
+        </div>
+        <textarea id="user-feedback-input" class="form-control rounded-0 border-dark font-monospace" rows="2" 
+                  placeholder="Введіть побажання чи напрямок для ШІ на наступне коло (наприклад: 'Зробіть фокус на прикладних алгоритмах або мобільній розробці')..."></textarea>
+        <div class="form-text font-monospace small mt-1 text-muted">
+            * Необов'язково. Якщо заповнено, Генератор та Критик врахують ваші побажання під час формування тем наступного кола.
+        </div>
+    </div>
+
+    <div id="user-feedback-history" class="mb-3">
+        {% for m in history %}
+            {% if m.agent == 'user' %}
+                <div class="alert-brutal mb-2 py-2 px-3 font-monospace small bg-white">
+                    <span class="badge-brutal badge-brutal-black me-2">[HUMAN INTERVENTION]</span>
+                    <span>{{ m.content }}</span>
+                </div>
+            {% endif %}
+        {% endfor %}
     </div>
 
     <div id="closed-bar" class="mb-2 font-monospace small"></div>
@@ -35,7 +76,6 @@
                     <span class="window-title">[GEN] ГЕНЕРАТОР</span>
                     <span class="window-controls">
                         <span class="step-status text-muted">ОЧІКУВАННЯ</span>
-                        <!-- <button type="button" class="win-btn" data-action="collapse" data-target="window-generator" title="Згорнути">[–]</button> -->
                         <button type="button" class="win-btn" data-action="expand" data-target="window-generator" title="На весь екран">[⤢]</button>
                         <button type="button" class="win-btn" data-action="close" data-target="window-generator" title="Закрити">[×]</button>
                     </span>
@@ -52,7 +92,6 @@
                     <span class="window-title">[CRT] КРИТИК</span>
                     <span class="window-controls">
                         <span class="step-status text-muted">ОЧІКУВАННЯ</span>
-                        <!-- <button type="button" class="win-btn" data-action="collapse" data-target="window-critic" title="Згорнути">[–]</button> -->
                         <button type="button" class="win-btn" data-action="expand" data-target="window-critic" title="На весь екран">[⤢]</button>
                         <button type="button" class="win-btn" data-action="close" data-target="window-critic" title="Закрити">[×]</button>
                     </span>
@@ -69,7 +108,6 @@
                     <span class="window-title">[JDG] СУДДЯ</span>
                     <span class="window-controls">
                         <span class="step-status text-muted">ОЧІКУВАННЯ</span>
-                        <!-- <button type="button" class="win-btn" data-action="collapse" data-target="window-judge" title="Згорнути">[–]</button> -->
                         <button type="button" class="win-btn" data-action="expand" data-target="window-judge" title="На весь екран">[⤢]</button>
                         <button type="button" class="win-btn" data-action="close" data-target="window-judge" title="Закрити">[×]</button>
                     </span>

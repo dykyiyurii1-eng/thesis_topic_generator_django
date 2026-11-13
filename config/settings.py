@@ -1,7 +1,7 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
-# import dj_database_url
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -12,7 +12,6 @@ SECRET_KEY = os.environ.get(
 )
 
 DEBUG = True
-# DEBUG = os.environ.get('DEBUG', 'false').lower() in ('true', '1', 't')
 
 ALLOWED_HOSTS = ['*']
 
@@ -96,6 +95,12 @@ else:
                 'charset': 'utf8mb4',
             },
         }
+    }
+
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
     }
 
 AUTH_PASSWORD_VALIDATORS = [

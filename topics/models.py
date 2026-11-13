@@ -131,6 +131,7 @@ class GeneratedTopic(models.Model):
     critic_comment = models.TextField(blank=True, verbose_name="Коментар критика")
     is_selected = models.BooleanField(default=False, verbose_name="Обрано")
     is_pinned = models.BooleanField(default=False, verbose_name="Закріплено")
+    is_liked = models.BooleanField(default=False, verbose_name="Подобається")
     round = models.PositiveIntegerField(default=1, verbose_name="Коло")
 
     class Meta:

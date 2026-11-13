@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 
 {% block title %}Створення генерації · THESIS_GEN{% endblock %}
@@ -8,7 +8,10 @@
     <div class="col-md-10 col-lg-8">
         <div class="card-brutal p-4">
             <span class="tech-index">SYS.GEN // FORM</span>
-            <h2 class="mb-4">СТВОРЕННЯ НОВОЇ ГЕНЕРАЦІЇ</h2>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">СТВОРЕННЯ НОВОЇ ГЕНЕРАЦІЇ</h2>
+                <button type="button" id="reset-draft-btn" class="btn-brutal btn-brutal-white py-1 px-2 font-monospace small" title="Очистити збережені налаштування">↺ СКИНУТИ</button>
+            </div>
             
             {% if form.errors %}
                 <div class="alert-brutal alert-brutal-danger mb-4">
@@ -22,7 +25,7 @@
                 {% csrf_token %}
                <div class="mb-3 autocomplete">
                     <label class="form-label fw-bold font-monospace">СПЕЦІАЛЬНІСТЬ</label>
-                    <input type="text" id="specialty_input" name="specialty" class="form-control rounded-0 border-dark font-monospace" placeholder="Почніть вводити назву..." autocomplete="off" required value="{{ form.specialty.value|default:'' }}">
+                    <input type="text" id="specialty_input" name="specialty" class="form-control rounded-0 border-dark font-monospace" placeholder="Почніть вводити назву..." autocomplete="off" required value="{{ request.GET.specialty|default:form.specialty.value|default:'' }}">
                     <div id="autocomplete-list" class="autocomplete-items"></div>
                 </div>
 
@@ -132,6 +135,77 @@ document.addEventListener('DOMContentLoaded', () => {
                 const name = chip.dataset.name || '';
                 chip.style.display = name.includes(q) ? '' : 'none';
             });
+        });
+    }
+
+    const STORAGE_KEY = 'thesis_gen_form_draft';
+    const form = document.querySelector('#gen-form');
+
+    const saveFormState = () => {
+        const data = {
+            specialty: document.querySelector('#specialty_input')?.value || '',
+            institution_type: document.querySelector('[name="institution_type"]')?.value || '',
+            level: document.querySelector('[name="level"]')?.value || '',
+            work_type: document.querySelector('[name="work_type"]')?.value || '',
+            rounds: document.querySelector('[name="rounds"]')?.value || '1',
+            interests: Array.from(document.querySelectorAll('#interest-chips input[type="checkbox"]:checked')).map(cb => cb.value),
+            custom: items
+        };
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+    };
+
+    const restoreFormState = () => {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+            const saved = JSON.parse(raw);
+            if (!saved) return;
+
+            const spec = document.querySelector('#specialty_input');
+            if (spec && !spec.value && saved.specialty) spec.value = saved.specialty;
+
+            const inst = document.querySelector('[name="institution_type"]');
+            if (inst && saved.institution_type) inst.value = saved.institution_type;
+
+            const lvl = document.querySelector('[name="level"]');
+            if (lvl && saved.level) lvl.value = saved.level;
+
+            const wt = document.querySelector('[name="work_type"]');
+            if (wt && saved.work_type) wt.value = saved.work_type;
+
+            const rnd = document.querySelector('[name="rounds"]');
+            if (rnd && saved.rounds) rnd.value = saved.rounds;
+
+            if (Array.isArray(saved.interests) && saved.interests.length > 0) {
+                document.querySelectorAll('#interest-chips input[type="checkbox"]').forEach(cb => {
+                    if (saved.interests.includes(cb.value)) cb.checked = true;
+                });
+            }
+
+            if (Array.isArray(saved.custom) && saved.custom.length > 0 && items.length === 0) {
+                items = saved.custom.slice(0, 5);
+                render();
+            }
+        } catch (e) {}
+    };
+
+    restoreFormState();
+
+    if (form) {
+        form.addEventListener('input', saveFormState);
+        form.addEventListener('change', saveFormState);
+    }
+
+    const resetBtn = document.querySelector('#reset-draft-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            if (confirm('Скинути збережені налаштування форми?')) {
+                try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+                if (form) form.reset();
+                items = [];
+                render();
+                document.querySelectorAll('#interest-chips input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+            }
         });
     }
 });

@@ -1,4 +1,4 @@
-﻿TOPICS_COUNT = 5
+TOPICS_COUNT = 5
 
 GENERATOR_SYSTEM = """Ти — досвідчений науковий керівник.
 Твоє завдання — згенерувати рівно 5 тем для кваліфікаційних робіт.
@@ -86,6 +86,18 @@ def build_generator_input(ctx):
 Обрана користувачем тема з попереднього кола: {pinned_topic}.
 Розвинь або вдоскональ цю тему в наступному колі.""" if pinned_topic else ""
 
+    user_feedback = ctx.get('user_feedback', '')
+    feedback_line = f"""
+ВАЖЛИВО! ПРЯМІ ВКАЗІВКИ ТА ПОБАЖАННЯ СТУДЕНТА/КОРИСТУВАЧА НА ЦЕ КОЛО:
+"{user_feedback}".
+Обов'язково скоригуй теми відповідно до цих побажань!""" if user_feedback else ""
+
+    liked_topics = ctx.get('liked_topics', [])
+    liked_line = f"""
+Теми, які найбільше сподобалися студенту в попередніх колах:
+{', '.join(liked_topics)}.
+Орієнтуйся на подібний стиль та науковий напрямок.""" if liked_topics else ""
+
     return f"""Спеціальність: {specialty}. 
 Індустрія: {industry}. 
 Рівень освіти: {education}. 
@@ -95,7 +107,7 @@ def build_generator_input(ctx):
 Складність: {complexity}. 
 Мета: {goal}. 
 Ключові слова: {keywords}. 
-Інтереси: {interests}.{pinned_line}
+Інтереси: {interests}.{pinned_line}{feedback_line}{liked_line}
 Згенеруй {TOPICS_COUNT} тем."""
 
 
@@ -105,3 +117,47 @@ def build_critic_input(ctx, topics):
 
 def build_judge_input(ctx, topics):
     return f"Спеціальність: {ctx.get('specialty', '')}.\nОціни ці теми:\n{topics}"
+
+
+AUDIT_SYSTEM = """Ти — головний науковий експерт університетської комісії з захисту кваліфікаційних робіт.
+Твоє завдання — провести всебічний та глибокий аудит теми роботи, запропонованої студентом.
+Відповідай ВИКЛЮЧНО українською мовою у форматі валідного JSON-об'єкта. Без жодного тексту до або після JSON.
+
+Формат JSON:
+{
+  "scores": {
+    "novelty": 8.5,
+    "feasibility": 7.0,
+    "relevance": 9.0,
+    "total": 8.2
+  },
+  "verdict": "Рекомендовано до затвердження з правками",
+  "strengths": [
+    "Сильна сторона 1",
+    "Сильна сторона 2"
+  ],
+  "risks": [
+    "Підводний камінь або ймовірне зауваження комісії 1",
+    "Підводний камінь 2"
+  ],
+  "recommendations": {
+    "object": "Об'єкт дослідження...",
+    "subject": "Предмет дослідження...",
+    "methods": "Рекомендовані методи..."
+  },
+  "improved_titles": [
+    "Покращене формулювання 1 (Академічне)",
+    "Покращене формулювання 2 (Практичне/прикладне)",
+    "Покращене формулювання 3 (Звужене/інноваційне)"
+  ]
+}
+Оцінки (scores): числа від 1.0 до 10.0."""
+
+
+def build_audit_input(specialty, level, title, description=""):
+    desc_part = f"\nОпис або ідея студента: {description}" if description else ""
+    return f"""Спеціальність: {specialty}
+Рівень освіти: {level}
+Тема студента: "{title}"{desc_part}
+
+Проведи професійний аудит цієї теми за критеріями комісії."""

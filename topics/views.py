@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 from datetime import timedelta
 
@@ -20,10 +20,12 @@ from .forms import GenerationSessionForm, EmailSendForm, SandboxForm
 from .models import (Interest, Question, GenerationSession, GeneratedTopic,
                      AgentMessage, HomePageImage, StudentInterest)
 from .services import process_quiz_results, run_debate_pipeline
-from .llm import call_with_fallback, LLMError
+from .llm import call_with_fallback, parse_json_response, LLMError
 from .prompts import (
     build_generator_input,
     SANDBOX_OPTIMIZER_SYSTEM,
+    AUDIT_SYSTEM,
+    build_audit_input,
 )
 
 
@@ -109,7 +111,7 @@ def debate_stream_view(request, session_id):
             selected_topic_id = None
 
     response = StreamingHttpResponse(
-        run_debate_pipeline(session, round_no, selected_topic_id=selected_topic_id),
+        run_debate_pipeline(session, round_no, selected_topic_id=selected_topic_id, user_feedback=request.GET.get('user_feedback', '').strip()),
         content_type='text/event-stream'
     )
     response['Cache-Control'] = 'no-cache'
@@ -128,6 +130,18 @@ def pin_topic_view(request, topic_id):
     topic.is_pinned = not topic.is_pinned
     topic.save(update_fields=['is_pinned'])
     return JsonResponse({'pinned': topic.is_pinned})
+
+
+@require_POST
+def like_topic_view(request, topic_id):
+    topic = get_object_or_404(
+        GeneratedTopic,
+        id=topic_id,
+        session__in=sessions_for_request(request),
+    )
+    topic.is_liked = not topic.is_liked
+    topic.save(update_fields=['is_liked'])
+    return JsonResponse({'liked': topic.is_liked})
 
 
 def trial_generate_view(request):
@@ -252,7 +266,6 @@ def sandbox_view(request):
                     'interests': [(j.strip(), 'high') for j in interests.split(',') if j.strip()],
                 }
 
-                # ── ГЕНЕРАЦІЯ ──
                 try:
                     raw_gen, provider_gen = call_with_fallback(
                         'generator', current_prompt, build_generator_input(ctx),
@@ -317,7 +330,6 @@ def sandbox_view(request):
                             break
                         continue
 
-                    # Якщо повернув JSON — одна повторна спроба
                     if _looks_like_topics_json(new_prompt):
                         retry_user = (
                             f"<PROMPT>\n{current_prompt}\n</PROMPT>\n\n"
@@ -462,6 +474,7 @@ class DebatePageView(DetailView):
                 'difficulty': t.get_difficulty_display(),
                 'score': float(t.score) if t.score is not None else None,
                 'is_pinned': t.is_pinned,
+                'is_liked': t.is_liked,
                 'round': t.round,
             }
             for t in GeneratedTopic.objects.filter(session=session).order_by('-is_pinned', 'round', '-score')
@@ -660,3 +673,49 @@ def admin_activity_view(request):
         'recent_sessions': recent_sessions,
     }
     return render(request, 'topics/admin_activity.html', context)
+
+
+def topic_audit_view(request):
+    audit_result = None
+    form_data = {
+        'specialty': '',
+        'level': 'Бакалавр',
+        'title': '',
+        'description': '',
+    }
+    error_message = None
+
+    if request.method == 'POST':
+        form_data['specialty'] = request.POST.get('specialty', '').strip()
+        form_data['level'] = request.POST.get('level', 'Бакалавр').strip()
+        form_data['title'] = request.POST.get('title', '').strip()
+        form_data['description'] = request.POST.get('description', '').strip()
+
+        if not form_data['specialty'] or not form_data['title']:
+            error_message = "Будь ласка, вкажіть спеціальність та назву теми."
+        else:
+            prompt = build_audit_input(
+                specialty=form_data['specialty'],
+                level=form_data['level'],
+                title=form_data['title'],
+                description=form_data['description']
+            )
+            try:
+                user_obj = request.user if request.user.is_authenticated else None
+                raw, provider = call_with_fallback('judge', AUDIT_SYSTEM, prompt, user_obj=user_obj)
+                audit_result = parse_json_response(raw)
+                if isinstance(audit_result, dict):
+                    audit_result['provider'] = provider
+                else:
+                    audit_result = None
+                    error_message = "ШІ повернув неочікувану структуру аудиту. Спробуйте ще раз."
+            except LLMError as e:
+                error_message = f"Помилка аудиту ШІ: {e}"
+            except Exception as e:
+                error_message = f"Не вдалося провести аудит: {e}"
+
+    return render(request, 'topics/audit.html', {
+        'form_data': form_data,
+        'audit_result': audit_result,
+        'error_message': error_message,
+    })

@@ -1,5 +1,6 @@
 import json
 import time
+import logging
 from collections import defaultdict
 
 from .llm import call_with_fallback, parse_json_response, LLMError
@@ -12,6 +13,8 @@ from .prompts import (
     build_critic_input,
     build_judge_input,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def process_quiz_results(user, selected_option_ids):
@@ -37,14 +40,20 @@ def process_quiz_results(user, selected_option_ids):
     return result_interests
 
 
-def sse(**payload):
-    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+def sse(event=None, **payload):
+    lines = []
+    if event:
+        lines.append(f"event: {event}")
+    lines.append(f"data: {json.dumps(payload, ensure_ascii=False)}")
+    return "\n".join(lines) + "\n\n"
 
 
 def _fail(session, text):
     session.status = 'error'
     session.save(update_fields=['status'])
-    yield sse(type='error', text=text)
+    msg = f"{text} Будь ласка, натисніть 'Повторити', щоб спробувати ще раз."
+    yield sse(type='error', text=msg, retry=True)
+    yield sse(event='error', type='error', text=msg, retry=True)
 
 
 def _clean_score(value):
@@ -62,13 +71,19 @@ def _save_message(session, agent, provider, text, seq):
     )
 
 
-def run_debate_pipeline(session, round_no, selected_topic_id=None):
+def run_debate_pipeline(session, round_no, selected_topic_id=None, user_feedback=None):
     if not 1 <= round_no <= session.rounds:
         yield sse(type='error', text='Некоректний номер кола.')
         return
 
     last_msg = session.messages.order_by('-sequence_number').first()
     base_seq = last_msg.sequence_number if last_msg else 0
+
+    clean_feedback = str(user_feedback).strip()[:500] if user_feedback else ''
+    if clean_feedback:
+        base_seq += 1
+        _save_message(session, 'user', 'user', clean_feedback, base_seq)
+        yield sse(type='user_message', text=clean_feedback, round=round_no)
 
     pinned_title = None
     if selected_topic_id:
@@ -79,6 +94,8 @@ def run_debate_pipeline(session, round_no, selected_topic_id=None):
             pinned_title = pinned.title
         except (ValueError, TypeError, GeneratedTopic.DoesNotExist):
             pass
+
+    liked_titles = list(session.topics.filter(is_liked=True).values_list('title', flat=True)[:5])
 
     ctx = {
         'specialty': session.specialty,
@@ -92,6 +109,8 @@ def run_debate_pipeline(session, round_no, selected_topic_id=None):
         'goal': session.goal,
         'keywords': session.keywords,
         'pinned_topic': pinned_title,
+        'user_feedback': clean_feedback,
+        'liked_topics': liked_titles,
     }
 
     yield sse(type='status', text=f'Генератор пише... (коло {round_no} з {session.rounds})')
@@ -103,6 +122,10 @@ def run_debate_pipeline(session, round_no, selected_topic_id=None):
         data = parse_json_response(raw)
     except LLMError as e:
         yield from _fail(session, str(e))
+        return
+    except Exception as e:
+        logger.exception("Помилка генератора: %s", e)
+        yield from _fail(session, f"Помилка зв'язку з Генератором: {e}")
         return
 
     items = [t for t in data if isinstance(t, dict)] if isinstance(data, list) else []
@@ -143,6 +166,10 @@ def run_debate_pipeline(session, round_no, selected_topic_id=None):
     except LLMError as e:
         yield from _fail(session, f'Критик недоступний: {e}')
         return
+    except Exception as e:
+        logger.exception("Помилка критика: %s", e)
+        yield from _fail(session, f"Помилка зв'язку з Критиком: {e}")
+        return
 
     reviews = [
         c for c in data
@@ -171,6 +198,10 @@ def run_debate_pipeline(session, round_no, selected_topic_id=None):
         data = parse_json_response(raw)
     except LLMError as e:
         yield from _fail(session, f'Суддя недоступний: {e}')
+        return
+    except Exception as e:
+        logger.exception("Помилка судді: %s", e)
+        yield from _fail(session, f"Помилка зв'язку з Суддею: {e}")
         return
 
     verdicts = [
@@ -203,6 +234,8 @@ def run_debate_pipeline(session, round_no, selected_topic_id=None):
             'critic_comment': t.critic_comment,
             'difficulty': t.get_difficulty_display(),
             'score': float(t.score) if t.score is not None else None,
+            'is_pinned': t.is_pinned,
+            'is_liked': t.is_liked,
         }
         for t in saved
     ])

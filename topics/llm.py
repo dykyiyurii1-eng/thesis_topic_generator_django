@@ -48,10 +48,15 @@ def parse_json_response(raw):
     if raw.endswith('```'):
         raw = raw[:-3]
 
-    start = raw.find('[')
-    end = raw.rfind(']')
-    if start != -1 and end != -1:
-        raw = raw[start:end+1]
+    start_list = raw.find('[')
+    end_list = raw.rfind(']')
+    start_obj = raw.find('{')
+    end_obj = raw.rfind('}')
+
+    if start_list != -1 and end_list != -1 and (start_obj == -1 or start_list < start_obj):
+        raw = raw[start_list:end_list+1]
+    elif start_obj != -1 and end_obj != -1:
+        raw = raw[start_obj:end_obj+1]
 
     try:
         return json.loads(raw)
@@ -233,7 +238,6 @@ def call_with_fallback(role, system, user_prompt, user_obj=None):
     for func, name, code in providers:
         user_key_obj, custom_key = _get_user_api_key(user_obj, code)
 
-        # 1. Спроба з власним ключем користувача (якщо є)
         if custom_key:
             try:
                 text = func(system, user_prompt, api_key=custom_key)
@@ -246,9 +250,7 @@ def call_with_fallback(role, system, user_prompt, user_obj=None):
                     user_key_obj.is_valid = False
                     user_key_obj.save(update_fields=['is_valid'])
                     logger.info("[LLM] Ключ користувача для %s позначено як недійсний.", name)
-                # Переходимо до спроби із системним ключем для цього ж провайдера
 
-        # 2. Спроба із системним ключем сервера
         try:
             text = func(system, user_prompt)
             return text, name

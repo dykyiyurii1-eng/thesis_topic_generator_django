@@ -19,93 +19,164 @@
 </div>
 {% endif %}
 
-<div class="row g-4 mb-4">
-    
+<div class="row g-4 mb-5">
     <div class="col-lg-7">
-        <div class="card-brutal h-100 d-flex flex-column justify-content-between p-4">
+        <div class="card-brutal h-100 d-flex flex-column justify-content-between p-4 p-md-5">
             <div>
                 <span class="tech-index">SYS.00 // MAIN</span>
-                <h1 class="display-3 mt-3 mb-4" style="font-size: 4rem; line-height: 1;">ГЕНЕРАТОР ТЕМ</h1>
-                <p class="fs-5 mb-4" style="max-width: 600px;">
-                    Цифрова система для генерацій академічних тем. Запусти дебати між трьома нейромережами: Генератором, Критиком та Суддею. <br>
-                    Отримай 5 ідеальних тем, проаналізованих штучним інтелектом.
+                <h1 class="display-3 mt-2 mb-3 fw-bold" style="letter-spacing: -2px; line-height: 1;">THESIS_GEN</h1>
+                <p class="fs-5 mb-4 text-muted" style="max-width: 600px;">
+                 Академічна платформа багатоагентних дебатів. Генератор пропонує гіпотези, Критик виявляє недоліки, а Суддя формує скоринг від 1 до 10.
                 </p>
             </div>
             <div class="d-flex gap-3 flex-wrap">
-                <a href="{% if user.is_authenticated %}{% url 'topics:generate' %}{% else %}{% url 'topics:trial' %}{% endif %}" class="btn-brutal btn-brutal-black">
+                <a href="{% if user.is_authenticated %}{% url 'topics:generate' %}{% else %}{% url 'topics:trial' %}{% endif %}" 
+                   class="btn-brutal btn-brutal-black py-3 px-4 font-monospace">
                     ПОЧАТИ ГЕНЕРАЦІЮ →
                 </a>
-                <a href="{% url 'topics:quiz' %}" class="btn-brutal">ТЕСТ ІНТЕРЕСІВ</a>
+                <a href="{% url 'topics:topic_audit' %}" class="btn-brutal py-3 px-4 font-monospace">
+                    АУДИТ ТЕМИ
+                </a>
             </div>
         </div>
     </div>
 
     <div class="col-lg-5">
-        <div class="card-brutal h-100 d-flex flex-column justify-content-between">
+        <div class="card-brutal h-100 d-flex flex-column justify-content-between p-4 p-md-5">
             <div>
                 <span class="tech-index">SYS.01 // AI_ENGINES</span>
-                <h3 class="mt-3 mb-4 fs-5">АКТИВНІ ШІ-МОДЕЛІ</h3>
+                <h3 class="mt-2 mb-4 fs-5 fw-bold font-monospace">[ АКТИВНІ ШІ-МОДЕЛІ ]</h3>
                 
-                <div class="d-flex justify-content-between mb-3 border-bottom border-dark pb-2">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-dark pb-2 font-monospace">
                     <span><span class="status-dot"></span>GENERATOR_AI</span>
-                    <span class="fw-bold font-monospace text-end" style="font-size: 0.8rem;">{{ ai_models.gemini|default:"gemini-2.5-flash" }}</span>
+                    <span class="fw-bold text-end small">{{ ai_models.gemini|default:"gemini-2.5-flash" }}</span>
                 </div>
-                <div class="d-flex justify-content-between mb-3 border-bottom border-dark pb-2">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-dark pb-2 font-monospace">
                     <span><span class="status-dot"></span>CRITIC_AI</span>
-                    <span class="fw-bold font-monospace text-end" style="font-size: 0.8rem;">{{ ai_models.groq|default:"llama-3.3-70b-versatile" }}</span>
+                    <span class="fw-bold text-end small">{{ ai_models.groq|default:"llama-3.3-70b-versatile" }}</span>
                 </div>
-                <div class="d-flex justify-content-between mb-3 border-bottom border-dark pb-2">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-dark pb-2 font-monospace">
                     <span><span class="status-dot"></span>JUDGE_AI</span>
-                    <span class="fw-bold font-monospace text-end" style="font-size: 0.8rem;">{{ ai_models.openrouter|default:"llama-3.3-70b-instruct:free" }}</span>
+                    <span class="fw-bold text-end small">{{ ai_models.openrouter|default:"llama-3.3-70b-instruct:free" }}</span>
                 </div>
             </div>
             
-            <div class="mt-4">
-                <div class="separator"></div>
-                <div class="small text-muted font-monospace">
-                    > SYSTEM READY<br>
-                    > 3 AI AGENTS ONLINE<br>
+            <div class="mt-4 pt-2">
+                <div class="separator mb-3"></div>
+                <div class="small text-muted font-monospace lh-sm">
+                    > SYSTEM STATUS: ONLINE<br>
+                    > 3 AUTONOMOUS AGENTS READY<br>
                     > MULTI-PROVIDER FALLBACK ACTIVE
                 </div>
             </div>
         </div>
     </div>
 </div>
-<h2 class="display-3 mt-3 mb-4" style="font-size: 4rem; line-height: 1;">Отримай теми всього за 3 кроки</h2>
-<div class="row g-4">
-    <div class="col-md-4" >
-         
-        <div class="card-brutal">
-            <span class="tech-index">MOD.01</span>
-            <div class="fs-1 fw-bold mb-2" style="font-family: 'Syne';">01.</div>
-            <h3 class="fs-5" >
-                <a href="{% url 'topics:quiz' %}" class="text-decoration-none text-reset d-block"> ТЕСТ ІНТЕРЕСІВ</a>
-               </h3>
-            <div class="separator"></div>
-            <p class="small text-muted mb-0">Пройди коротке опитування, щоб система визначила твої ключові академічні зацікавлення.</p>
-        </div>
+
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <span class="tech-index position-static d-inline-block mb-1">NAV.CORE // ACTION_GRID</span>
+        <h2 class="display-5 fw-bold mb-0" style="letter-spacing: -1px;">МОДУЛІ СИСТЕМИ</h2>
+    </div>
+    <div class="small font-monospace text-muted d-none d-md-block">
+        [ НАТИСНІТЬ НА БЛОК ДЛЯ ПЕРЕХОДУ ]
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-lg-3">
+        <a href="{% url 'topics:quiz' %}" class="card-brutal text-decoration-none text-reset h-100 d-flex flex-column justify-content-between p-4 d-block">
+            <div>
+                <span class="tech-index">MOD.01 // PROFILER</span>
+                <div class="fs-1 fw-bold mb-2 font-monospace" style="font-family: 'Syne';">01.</div>
+                <h4 class="fw-bold mb-2 font-monospace">ТЕСТ ІНТЕРЕСІВ</h4>
+                <div class="separator mb-3"></div>
+                <p class="small text-muted mb-4 font-monospace">
+                    Пройдіть інтерактивне опитування, щоб визначити ваші наукові уподобання та отримати персоналізовані теми.
+                </p>
+            </div>
+            <div class="mt-auto pt-2 border-top border-dark d-flex justify-content-between align-items-center font-monospace small fw-bold">
+                <span>ПРОЙТИ ТЕСТ</span>
+                <span>→</span>
+            </div>
+        </a>
     </div>
 
-    <div class="col-md-4">
-        <div class="card-brutal">
-            <span class="tech-index">MOD.02</span>
-            <div class="fs-1 fw-bold mb-2" style="font-family: 'Syne';">02.</div>
-           <a href="{% if user.is_authenticated %}{% url 'topics:generate' %}{% else %}{% url 'topics:trial' %}{% endif %}" class="text-decoration-none text-reset d-block">
-                    ДЕБАТИ ШІ
-                </a>
-            <div class="separator"></div>
-            <p class="small text-muted mb-0">Генератор пропонує ідеї, Критик знаходить недоліки. Обери найкращу тему в результаті дебатів.</p>
-        </div>
+    <div class="col-md-6 col-lg-3">
+        <a href="{% if user.is_authenticated %}{% url 'topics:generate' %}{% else %}{% url 'topics:trial' %}{% endif %}" 
+           class="card-brutal text-decoration-none text-reset h-100 d-flex flex-column justify-content-between p-4 d-block">
+            <div>
+                <span class="tech-index">MOD.02 // DEBATE</span>
+                <div class="fs-1 fw-bold mb-2 font-monospace" style="font-family: 'Syne';">02.</div>
+                <h4 class="fw-bold mb-2 font-monospace">ДЕБАТИ ШІ</h4>
+                <div class="separator mb-3"></div>
+                <p class="small text-muted mb-4 font-monospace">
+                    Запустіть повний цикл генерації: створення варіантів, жорстка критика та оцінювання незалежним Суддею.
+                </p>
+            </div>
+            <div class="mt-auto pt-2 border-top border-dark d-flex justify-content-between align-items-center font-monospace small fw-bold">
+                <span>НОВА ГЕНЕРАЦІЯ</span>
+                <span>→</span>
+            </div>
+        </a>
     </div>
 
-    <div class="col-md-4">
-        <div class="card-brutal">
-            <span class="tech-index">MOD.03</span>
-            <div class="fs-1 fw-bold mb-2" style="font-family: 'Syne';">03.</div>
-            <h3 class="fs-5">ФІНАЛЬНИЙ ВИБІР</h3>
-            <div class="separator"></div>
-            <p class="small text-muted mb-0">Закріпи тему, яка тобі сподобалась, та збережи її в особистій історії генерацій.</p>
-        </div>
+    <div class="col-md-6 col-lg-3">
+        <a href="{% url 'topics:topic_audit' %}" class="card-brutal text-decoration-none text-reset h-100 d-flex flex-column justify-content-between p-4 d-block">
+            <div>
+                <span class="tech-index">MOD.03 // AUDIT</span>
+                <div class="fs-1 fw-bold mb-2 font-monospace" style="font-family: 'Syne';">03.</div>
+                <h4 class="fw-bold mb-2 font-monospace">АУДИТ ТЕМИ</h4>
+                <div class="separator mb-3"></div>
+                <p class="small text-muted mb-4 font-monospace">
+                    Маєте власну тему? Отримайте миттєву експертну рецензію комісії, аналіз підводних каменів та 3 кращих формулювання.
+                </p>
+            </div>
+            <div class="mt-auto pt-2 border-top border-dark d-flex justify-content-between align-items-center font-monospace small fw-bold">
+                <span>ПРОВЕСТИ АУДИТ</span>
+                <span>→</span>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <a href="{% url 'topics:history' %}" class="card-brutal text-decoration-none text-reset h-100 d-flex flex-column justify-content-between p-4 d-block">
+            <div>
+                <span class="tech-index">MOD.04 // ARCHIVE</span>
+                <div class="fs-1 fw-bold mb-2 font-monospace" style="font-family: 'Syne';">04.</div>
+                <h4 class="fw-bold mb-2 font-monospace">МОЯ ІСТОРІЯ</h4>
+                <div class="separator mb-3"></div>
+                <p class="small text-muted mb-4 font-monospace">
+                    Архів усіх ваших генерацій, обраних та лайкнутих тем, з можливістю надіслати підбірку на Email.
+                </p>
+            </div>
+            <div class="mt-auto pt-2 border-top border-dark d-flex justify-content-between align-items-center font-monospace small fw-bold">
+                <span>ВІДКРИТИ ІСТОРІЮ</span>
+                <span>→</span>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mt-1">
+    <div class="col-12">
+        <a href="{% url 'topics:api_keys' %}" class="card-brutal text-decoration-none text-reset p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 d-block">
+            <div>
+                <span class="tech-index">CFG.01 // BYOK_SYSTEM</span>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge-brutal badge-brutal-black font-monospace small">[ BYOK ]</span>
+                    <h4 class="mb-0 fw-bold font-monospace">ПІДКЛЮЧЕННЯ ВЛАСНИХ КЛЮЧІВ</h4>
+                </div>
+                <p class="small text-muted mb-0 font-monospace" style="max-width: 800px;">
+                    Додайте власний API-ключ Gemini, Groq або OpenRouter: отримайте підвищений денний ліміт (до 50 сесій на день) та 100% захист від вичерпання загальних квот.
+                </p>
+            </div>
+            <div class="text-nowrap">
+                <span class="btn-brutal btn-brutal-white font-monospace small py-2 px-3">
+                    НАЛАШТУВАТИ КЛЮЧІ ↗
+                </span>
+            </div>
+        </a>
     </div>
 </div>
 {% endblock %}

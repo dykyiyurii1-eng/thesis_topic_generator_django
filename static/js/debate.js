@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     const btn = document.querySelector('#start-btn');
     if (!btn) return;
     const statusText = document.querySelector('#status-text');
@@ -126,6 +126,16 @@
         crit.className = 'small text-muted';
         crit.textContent = 'Критик: ' + (t.critic_comment || '—');
 
+        const like = document.createElement('button');
+        like.className = 'btn-brutal me-2';
+        like.textContent = t.is_liked ? '👍 ЛАЙКНУТО' : '👍 ЛАЙК';
+        if (t.is_liked) {
+            like.style.background = '#000';
+            like.style.color = '#fff';
+        }
+        like.title = 'Лайкнути тему (ШІ візьме її як орієнтир для наступних кіл)';
+        like.addEventListener('click', function () { likeTopic(t.db_id, like); });
+
         const pin = document.createElement('button');
         pin.className = 'btn-brutal';
         pin.textContent = t.is_pinned ? 'ДОДАНО' : 'ДОДАТИ';
@@ -152,7 +162,7 @@
         });
         sel.classList.add('topic-sel-btn');
 
-        card.append(h, meta, why, crit, pin, sel);
+        card.append(h, meta, why, crit, like, pin, sel);
         col.appendChild(card);
         container.appendChild(col);
     }
@@ -197,37 +207,70 @@
             .catch(function () { button.textContent = 'ПОМИЛКА, СПРОБУЙ ЩЕ'; });
     }
 
+    function likeTopic(id, button) {
+        if (!btn.dataset.likeUrlTemplate) return;
+        const url = btn.dataset.likeUrlTemplate.replace('/0/', '/' + id + '/');
+        const csrfToken = btn.dataset.csrf || getCookie('csrftoken');
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(function (r) {
+                if (!r.ok || r.redirected) throw new Error(r.status);
+                return r.json();
+            })
+            .then(function (data) {
+                if (data.liked) {
+                    button.textContent = '👍 ЛАЙКНУТО';
+                    button.style.background = '#000';
+                    button.style.color = '#fff';
+                } else {
+                    button.textContent = '👍 ЛАЙК';
+                    button.style.background = '';
+                    button.style.color = '';
+                }
+            })
+            .catch(function () { button.textContent = 'ПОМИЛКА'; });
+    }
+
     function showPanel() { panel.classList.add('active'); }
 
     function finishRound(round) {
+        const feedbackBox = document.querySelector('#intervention-box');
+        const feedbackRoundNum = document.querySelector('#feedback-round-num');
         if (round >= totalRounds) {
             btn.disabled = true;
             btn.textContent = 'ДЕБАТИ ЗАВЕРШЕНО';
             statusText.textContent = 'ЗАВЕРШЕНО';
+            if (feedbackBox) feedbackBox.classList.add('d-none');
         } else {
             btn.disabled = false;
             btn.dataset.nextRound = round + 1;
             btn.textContent = 'ПОЧАТИ КОЛО ' + (round + 1);
             statusText.textContent = 'КОЛО ' + round + ' ГОТОВЕ';
+            if (feedbackBox) feedbackBox.classList.remove('d-none');
+            if (feedbackRoundNum) feedbackRoundNum.textContent = round + 1;
         }
     }
     function friendlyError(raw) {
-    const t = String(raw || '').toLowerCase();
-
-
-    if (/429|rate.?limit|quota|exhausted|too many requests|tokens per day|tpd/.test(t)) {
-        return 'Денні ліміти ШІ-сервісів на сьогодні вичерпані. Спробуйте завтра.';
+        const t = String(raw || '').toLowerCase();
+        if (/429|rate.?limit|quota|exhausted|too many requests|tokens per day|tpd/.test(t)) {
+            return 'Ліміт запитів до ШІ вичерпано. Зачекайте хвилину та спробуйте ще раз.';
+        }
+        if (/json_validate_failed|failed to validate json|invalid_request_error/.test(t)) {
+            return 'ШІ повернув відповідь у некоректному форматі. Натисніть кнопку, щоб повторити спробу.';
+        }
+        if (/усі ші-провайдери недоступні|all providers|недоступні/.test(t)) {
+            return 'Усі ШІ-провайдери тимчасово недоступні. Будь ласка, натисніть "Повторити", щоб спробувати ще раз.';
+        }
+        if (/з’єднання перервано|failed to fetch|networkerror/.test(t)) {
+            return 'З’єднання з сервером перервано. Натисніть кнопку, щоб повторити.';
+        }
+        return 'Сталася помилка під час генерації. Будь ласка, спробуйте ще раз.';
     }
-
-    if (/json_validate_failed|failed to validate json|invalid_request_error/.test(t)) {
-        return 'ШІ повернув відповідь у неправильному форматі. Натисніть кнопку ще раз.';
-    }
-
-    if (/усі ші-провайдери недоступні|all providers/.test(t)) {
-        return 'ШІ-сервіси зараз недоступні. Спробуйте ще раз за кілька хвилин.';
-    }
-    return 'Сталася помилка під час генерації. Спробуйте ще раз.';
-}
 
     function start() {
         const round = parseInt(btn.dataset.nextRound, 10);
@@ -240,33 +283,86 @@
             setStep(id.replace('window-', ''), 'ОЧІКУВАННЯ');
         });
 
+        const feedbackInput = document.querySelector('#user-feedback-input');
+        const feedbackText = feedbackInput ? feedbackInput.value.trim() : '';
+
         let url = btn.dataset.streamUrl + '?round=' + round;
         if (selectedTopicId) url += '&selected_topic=' + selectedTopicId;
+        if (feedbackText) url += '&user_feedback=' + encodeURIComponent(feedbackText);
         source = new EventSource(url);
 
+        function handleStreamError(errPayload) {
+            if (source) {
+                source.close();
+                source = null;
+            }
+            let rawText = '';
+            if (typeof errPayload === 'string') {
+                rawText = errPayload;
+            } else if (errPayload && errPayload.text) {
+                rawText = errPayload.text;
+            } else if (errPayload && errPayload.data) {
+                try {
+                    const parsed = JSON.parse(errPayload.data);
+                    rawText = parsed.text || '';
+                } catch (e) {
+                    rawText = String(errPayload.data);
+                }
+            }
+
+            console.error('[SSE ERROR]', rawText);
+            statusText.textContent = friendlyError(rawText);
+            btn.disabled = false;
+            btn.textContent = '↻ ПОВТОРИТИ КОЛО ' + round;
+
+            Object.keys(WINDOWS).forEach(function (id) {
+                const el = document.querySelector('#' + id + ' .step-status');
+                if (el && el.textContent === 'ОЧІКУВАННЯ') {
+                    el.textContent = 'ЗУПИНЕНО';
+                }
+            });
+        }
+
+        source.addEventListener('error', function (e) {
+            handleStreamError(e);
+        });
+
         source.onmessage = function (e) {
-            const d = JSON.parse(e.data);
-            if (d.type === 'status') {
+            let d;
+            try {
+                d = JSON.parse(e.data);
+            } catch (err) {
+                return;
+            }
+
+            if (d.type === 'error') {
+                handleStreamError(d);
+            } else if (d.type === 'user_message') {
+                const historyEl = document.querySelector('#user-feedback-history');
+                if (historyEl) {
+                    historyEl.classList.remove('d-none');
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = 'alert-brutal mb-2 py-2 px-3 font-monospace small bg-white';
+                    msgDiv.innerHTML = '<span class="badge-brutal badge-brutal-black me-2">[HUMAN INTERVENTION]</span> ' + d.text;
+                    historyEl.appendChild(msgDiv);
+                }
+                if (feedbackInput) feedbackInput.value = '';
+            } else if (d.type === 'status') {
                 statusText.textContent = d.text;
             } else if (d.type === 'agent') {
                 addMessage(d.agent, d.text);
                 setStep(d.agent, 'ГОТОВО (' + d.provider + ')');
             } else if (d.type === 'round_done') {
                 source.close();
+                source = null;
                 d.topics.forEach(function (t) { t.round = d.round; renderTopic(t); });
                 showPanel();
                 finishRound(d.round);
-            } else if (d.type === 'error') {
-    source.close();
-    console.error('Помилка генерації:', d.text);
-    statusText.textContent = friendlyError(d.text);
-    btn.disabled = false;
-}
+            }
         };
-        source.onerror = function () {
-            source.close();
-            statusText.textContent = 'З’ЄДНАННЯ ПЕРЕРВАНО. ОНОВІТЬ СТОРІНКУ';
-            btn.disabled = false;
+
+        source.onerror = function (e) {
+            handleStreamError(e);
         };
     }
 

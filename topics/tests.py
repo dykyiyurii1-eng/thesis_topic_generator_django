@@ -113,3 +113,40 @@ class CustomErrorPagesTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'ВНУТРІШНЯ ПОМИЛКА СЕРВЕРА')
         self.assertContains(resp, '500')
+
+
+class TopicLikeAndInterventionTest(TestCase):
+    """Перевірка функціоналу лайків та втручання користувача."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester', password='pass1234!')
+        from topics.models import GenerationSession, GeneratedTopic
+        self.session = GenerationSession.objects.create(
+            student=self.user,
+            specialty='Комп’ютерні науки',
+            institution_type='university',
+            work_type='practical',
+            rounds=3
+        )
+        self.topic = GeneratedTopic.objects.create(
+            session=self.session,
+            topic_key='t1',
+            title='Тестова тема',
+            is_liked=False
+        )
+
+    def test_toggle_like_topic(self):
+        self.client.force_login(self.user)
+        # 1-й виклик: ставимо лайк
+        resp = self.client.post(reverse('topics:like_topic', args=[self.topic.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json().get('liked'))
+        self.topic.refresh_from_db()
+        self.assertTrue(self.topic.is_liked)
+
+        # 2-й виклик: знімаємо лайк
+        resp2 = self.client.post(reverse('topics:like_topic', args=[self.topic.id]))
+        self.assertEqual(resp2.status_code, 200)
+        self.assertFalse(resp2.json().get('liked'))
+        self.topic.refresh_from_db()
+        self.assertFalse(self.topic.is_liked)

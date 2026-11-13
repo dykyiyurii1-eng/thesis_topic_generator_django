@@ -24,28 +24,53 @@
             </button>
             
             <div class="collapse navbar-collapse justify-content-end" id="mainNav">
-                <div class="navbar-nav align-items-center gap-3 mt-3 mt-lg-0">
-                    <a class="nav-link font-monospace fw-bold text-dark" href="{% url 'topics:home' %}">[ 01_Головна ]</a>
-                    <a class="nav-link font-monospace fw-bold text-dark" href="{% url 'topics:quiz' %}">[ 02_Тест ]</a>
-                    <a class="nav-link font-monospace fw-bold text-dark" href="{% url 'topics:history' %}">[ 03_Історія ]</a>
+                <div class="navbar-nav align-items-center gap-2 mt-3 mt-lg-0">
+                    <a class="nav-link font-monospace fw-bold text-dark text-nowrap" href="{% url 'topics:home' %}">[ 01_Головна ]</a>
+                    <a class="nav-link font-monospace fw-bold text-dark text-nowrap" href="{% url 'topics:quiz' %}">[ 02_Тест ]</a>
+                    <a class="nav-link font-monospace fw-bold text-dark text-nowrap" href="{% url 'topics:topic_audit' %}">[ 03_Аудит теми ]</a>
+                    <a class="nav-link font-monospace fw-bold text-dark text-nowrap" href="{% url 'topics:history' %}">[ 04_Історія ]</a>
+
+                    <a href="{% if user.is_authenticated %}{% url 'topics:generate' %}{% else %}{% url 'topics:trial' %}{% endif %}" 
+                       class="btn-brutal btn-brutal-black py-1 px-3 text-nowrap font-monospace small mx-lg-1">
+                        + ГЕНЕРАЦІЯ
+                    </a>
                     
                     {% if user.is_authenticated %}
                         {% if user.is_staff %}
-                            <a class="nav-link font-monospace fw-bold text-danger" href="{% url 'topics:admin_activity' %}">[ АКТИВНІСТЬ ]</a>
-                            <a class="nav-link font-monospace fw-bold text-danger" href="{% url 'topics:sandbox' %}">[ ПІСОЧНИЦЯ ]</a>
-                            <a class="nav-link font-monospace fw-bold text-danger" href="/admin/">[ АДМІНКА ]</a>
+                            <div class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle font-monospace fw-bold text-danger text-nowrap" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    [ ⚙ АДМІНКА ]
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end rounded-0 border-dark shadow-none font-monospace small">
+                                    <li><a class="dropdown-item py-2" href="{% url 'topics:admin_activity' %}">АКТИВНІСТЬ КОРИСТУВАЧІВ</a></li>
+                                    <li><a class="dropdown-item py-2" href="{% url 'topics:sandbox' %}">ПІСОЧНИЦЯ ПРОМПТІВ</a></li>
+                                    <li><hr class="dropdown-divider border-dark my-1"></li>
+                                    <li><a class="dropdown-item py-2 text-danger" href="/admin/" target="_blank">DJANGO АДМІНКА ↗</a></li>
+                                </ul>
+                            </div>
                         {% endif %}
-                        <a class="nav-link font-monospace fw-bold text-dark" href="{% url 'topics:api_keys' %}">[ Мої ключі ]</a>
-                        <span class="nav-link text-muted font-monospace mb-0">{{ user.username }}</span>
-                        <form action="{% url 'accounts:logout' %}" method="post" class="d-flex m-0">
-                            {% csrf_token %}
-                            <button type="submit" id="bye" class="btn btn-link nav-link font-monospace fw-bold text-dark p-0">[ ВИЙТИ ]</button>
-                        </form>
+
+                        <div class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle font-monospace fw-bold text-dark text-nowrap" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                [ 👤 {{ user.username }} ]
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end rounded-0 border-dark shadow-none font-monospace small">
+                                <li><a class="dropdown-item py-2" href="{% url 'topics:api_keys' %}">ВЛАСНІ API-КЛЮЧІ</a></li>
+                                <li><a class="dropdown-item py-2" href="{% url 'topics:history' %}">МОЇ СЕСІЇ</a></li>
+                                <li><hr class="dropdown-divider border-dark my-1"></li>
+                                <li>
+                                    <form action="{% url 'accounts:logout' %}" method="post" class="m-0 p-0">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item py-2 text-danger font-monospace border-0 bg-transparent w-100 text-start">ВИЙТИ</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
                     {% else %}
-                        <a class="nav-link font-monospace fw-bold text-dark" href="{% url 'accounts:login' %}">[ LOGIN ]</a>
+                        <a class="nav-link font-monospace fw-bold text-dark text-nowrap" href="{% url 'accounts:login' %}">[ УВІЙТИ ]</a>
                     {% endif %}
                     
-                    <button id="theme-toggle" class="btn btn-link nav-link font-monospace fw-bold text-dark p-0" title="Змінити тему">[ ● ]</button>
+                    <button id="theme-toggle" class="btn btn-link nav-link font-monospace fw-bold text-dark p-0 text-nowrap ms-1" title="Змінити тему">[ ● ]</button>
                 </div>
             </div>
         </div>
