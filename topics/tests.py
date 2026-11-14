@@ -41,7 +41,7 @@ class UserApiKeyIsolationTest(TestCase):
         resp = self.client.get(reverse('topics:api_keys'))
         self.assertEqual(resp.status_code, 200)
         self.assertNotContains(resp, 'sk-groq-supersecret1234')
-        self.assertNotContains(resp, '1234')  # last4 of user1's key
+        self.assertNotContains(resp, '1234')
 
     def test_anon_redirected_to_login(self):
         resp = self.client.get(reverse('topics:api_keys'))
@@ -53,7 +53,6 @@ class UserApiKeyIsolationTest(TestCase):
         resp = self.client.get(reverse('topics:api_keys'))
         self.assertEqual(resp.status_code, 200)
         self.assertNotContains(resp, 'sk-groq-supersecret1234')
-        # Mask is shown:
         self.assertContains(resp, '1234')
 
     def test_delete_own_key(self):
@@ -137,14 +136,12 @@ class TopicLikeAndInterventionTest(TestCase):
 
     def test_toggle_like_topic(self):
         self.client.force_login(self.user)
-        # 1-й виклик: ставимо лайк
         resp = self.client.post(reverse('topics:like_topic', args=[self.topic.id]))
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.json().get('liked'))
         self.topic.refresh_from_db()
         self.assertTrue(self.topic.is_liked)
 
-        # 2-й виклик: знімаємо лайк
         resp2 = self.client.post(reverse('topics:like_topic', args=[self.topic.id]))
         self.assertEqual(resp2.status_code, 200)
         self.assertFalse(resp2.json().get('liked'))

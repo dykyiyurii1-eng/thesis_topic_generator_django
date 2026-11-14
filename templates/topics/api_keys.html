@@ -7,7 +7,6 @@
 <div class="row justify-content-center">
   <div class="col-lg-9 col-xl-8">
 
-    {# ── ЗАГОЛОВОК + КНОПКА ПОЯСНЕННЯ ── #}
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
       <div>
         <span class="tech-index position-static d-block mb-1">BYOK.01 // KEYS</span>
@@ -19,7 +18,6 @@
       </button>
     </div>
 
-    {# ══════════════ МОДАЛЬНЕ ВІКНО (BRUTALIST) ══════════════ #}
     <div class="modal fade" id="trustModal" tabindex="-1" aria-labelledby="trustModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content modal-brutal">
@@ -31,7 +29,6 @@
           </div>
 
           <div class="modal-body p-0">
-            {# Брутальні вкладки #}
             <ul class="nav nav-tabs-brutal px-3 pt-3" id="trustTabs" role="tablist">
               <li class="nav-item">
                 <button class="nav-link active" id="tab-where"
@@ -49,14 +46,12 @@
 
             <div class="tab-content p-4">
 
-              {# ── ВКЛАДКА 1: ДЕ ВЗЯТИ КЛЮЧ ── #}
               <div class="tab-pane fade show active" id="where" role="tabpanel">
                 <p class="font-monospace small mb-4">
                   API-ключ — це персональний цифровий пропуск до нейромережі.
                   Ви безкоштовно створюєте його на офіційному сайті провайдера, копіюєте та вставляєте сюди.
                 </p>
 
-                {# Gemini #}
                 <div class="card-brutal p-3 mb-3">
                   <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="font-monospace fw-bold mb-0">
@@ -76,7 +71,6 @@
                   </div>
                 </div>
 
-                {# Groq #}
                 <div class="card-brutal p-3 mb-3">
                   <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="font-monospace fw-bold mb-0">
@@ -96,7 +90,6 @@
                   </div>
                 </div>
 
-                {# OpenRouter #}
                 <div class="card-brutal p-3 mb-3">
                   <div class="d-flex justify-content-between align-items-center mb-2">
                     <h6 class="font-monospace fw-bold mb-0">
@@ -121,7 +114,6 @@
                 </div>
               </div>
 
-              {# ── ВКЛАДКА 2: ЧОМУ ДОВІРЯТИ ── #}
               <div class="tab-pane fade" id="trust" role="tabpanel">
 
                 <p class="font-monospace small mb-4">
@@ -197,9 +189,7 @@
         </div>
       </div>
     </div>
-    {# ══════════════ КІНЕЦЬ МОДАЛІ ══════════════ #}
 
-    {# ── ІНФОРМАЦІЙНИЙ БЛОК БРУТАЛ ── #}
     <div class="card-brutal p-4 mb-4 position-relative">
       <span class="tech-index">SYS.SECURITY // FERNET_ENCRYPTED</span>
       <h6 class="font-monospace fw-bold mb-3 text-uppercase">> БЕЗПЕКА ВАШОГО API-КЛЮЧА</h6>
@@ -211,7 +201,6 @@
       </ul>
     </div>
 
-    {# ── ТАБЛИЦЯ ІСНУЮЧИХ КЛЮЧІВ ── #}
     <div class="card-brutal p-4 mb-4">
       <span class="tech-index">SYS.STORAGE // ACTIVE</span>
       <h5 class="fw-bold font-monospace mb-3 text-uppercase">Збережені ключі</h5>
@@ -270,7 +259,6 @@
       {% endif %}
     </div>
 
-    {# ── ФОРМА ДОДАВАННЯ КЛЮЧА ── #}
     <div class="card-brutal p-4 mb-4">
       <span class="tech-index">SYS.INPUT // NEW_KEY</span>
       <h5 class="fw-bold font-monospace mb-3 text-uppercase">Додати або оновити ключ</h5>

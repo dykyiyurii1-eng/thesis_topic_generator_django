@@ -3,180 +3,224 @@
 
 {% block title %}Головна · THESIS_GEN{% endblock %}
 
-{% block extra_css %}
-     <link rel="stylesheet" href="{% static 'css/brytal_style.css' %}">
-{% endblock %}
-
 {% block content %}
 
-{% if hero_image %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card-brutal p-0" style="overflow: hidden;">
-            <img src="{{ hero_image.image.url }}" alt="AI Debate Process" class="img-fluid w-100" style="border-bottom: 1px solid #000; display: block;">
-        </div>
-    </div>
+<div id="boot-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;color:#fff;z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:clamp(1.5rem,5vw,4rem);font-family:'JetBrains Mono',monospace;font-size:clamp(0.75rem,1.5vw,1rem);overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.03) 2px,rgba(255,255,255,0.03) 4px);"></div>
+    <div id="boot-output" style="line-height:1.9;max-width:800px;position:relative;z-index:1;"></div>
+    <div id="boot-cursor" style="display:inline-block;width:10px;height:1.1em;background:#fff;margin-left:2px;vertical-align:middle;animation:cur-blink 0.7s steps(1) infinite;position:relative;z-index:1;"></div>
+    <div style="position:absolute;bottom:2rem;right:2rem;font-size:0.7rem;color:rgba(255,255,255,0.4);cursor:pointer;border:1px solid rgba(255,255,255,0.2);padding:4px 10px;" onclick="skipBoot()">[ ESC / SKIP ]</div>
 </div>
-{% endif %}
 
-<div class="row g-4 mb-5">
-    <div class="col-lg-7">
-        <div class="card-brutal h-100 d-flex flex-column justify-content-between p-4 p-md-5">
-            <div>
-                <span class="tech-index">SYS.00 // MAIN</span>
-                <h1 class="display-3 mt-2 mb-3 fw-bold" style="letter-spacing: -2px; line-height: 1;">THESIS_GEN</h1>
-                <p class="fs-5 mb-4 text-muted" style="max-width: 600px;">
-                 Академічна платформа багатоагентних дебатів. Генератор пропонує гіпотези, Критик виявляє недоліки, а Суддя формує скоринг від 1 до 10.
-                </p>
-            </div>
-            <div class="d-flex gap-3 flex-wrap">
-                <a href="{% if user.is_authenticated %}{% url 'topics:generate' %}{% else %}{% url 'topics:trial' %}{% endif %}" 
-                   class="btn-brutal btn-brutal-black py-3 px-4 font-monospace">
-                    ПОЧАТИ ГЕНЕРАЦІЮ →
-                </a>
-                <a href="{% url 'topics:topic_audit' %}" class="btn-brutal py-3 px-4 font-monospace">
-                    АУДИТ ТЕМИ
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-5">
-        <div class="card-brutal h-100 d-flex flex-column justify-content-between p-4 p-md-5">
-            <div>
-                <span class="tech-index">SYS.01 // AI_ENGINES</span>
-                <h3 class="mt-2 mb-4 fs-5 fw-bold font-monospace">[ АКТИВНІ ШІ-МОДЕЛІ ]</h3>
-                
-                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-dark pb-2 font-monospace">
-                    <span><span class="status-dot"></span>GENERATOR_AI</span>
-                    <span class="fw-bold text-end small">{{ ai_models.gemini|default:"gemini-2.5-flash" }}</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-dark pb-2 font-monospace">
-                    <span><span class="status-dot"></span>CRITIC_AI</span>
-                    <span class="fw-bold text-end small">{{ ai_models.groq|default:"llama-3.3-70b-versatile" }}</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-dark pb-2 font-monospace">
-                    <span><span class="status-dot"></span>JUDGE_AI</span>
-                    <span class="fw-bold text-end small">{{ ai_models.openrouter|default:"llama-3.3-70b-instruct:free" }}</span>
-                </div>
-            </div>
-            
-            <div class="mt-4 pt-2">
-                <div class="separator mb-3"></div>
-                <div class="small text-muted font-monospace lh-sm">
-                    > SYSTEM STATUS: ONLINE<br>
-                    > 3 AUTONOMOUS AGENTS READY<br>
-                    > MULTI-PROVIDER FALLBACK ACTIVE
-                </div>
-            </div>
-        </div>
+<div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;width:100%;background:#000;color:#fff;border-top:3px solid #fff;font-family:'JetBrains Mono',monospace;font-size:0.72rem;z-index:9998;padding:0.75rem 1.5rem;flex-direction:row;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+    <span>&gt;_ SYS.COOKIES // Цей сайт не відстежує вас. Тільки сесія для авторизації та localStorage для теми інтерфейсу.</span>
+    <div style="display:flex;gap:0.5rem;">
+        <button onclick="acceptCookies()" style="background:#fff;color:#000;border:none;font-family:'JetBrains Mono',monospace;font-size:0.72rem;font-weight:700;padding:5px 16px;cursor:pointer;">[ OK ]</button>
+        <button onclick="declineCookies()" style="background:transparent;color:#fff;border:1px solid #fff;font-family:'JetBrains Mono',monospace;font-size:0.72rem;padding:5px 16px;cursor:pointer;">[ ЗАКРИТИ ]</button>
     </div>
 </div>
 
-<div class="d-flex justify-content-between align-items-end mb-4">
+<div style="overflow:hidden;background:#000;color:#fff;padding:6px 0;border-bottom:2px solid #000;margin-bottom:0;">
+    <div style="white-space:nowrap;display:inline-block;animation:marquee-scroll 28s linear infinite;font-size:0.7rem;letter-spacing:0.08em;font-family:'JetBrains Mono',monospace;">
+        &nbsp;&nbsp;THESIS_GEN v1.0 &nbsp;// СИСТЕМА ОНЛАЙН &nbsp;// 3 AI АГЕНТИ АКТИВНІ &nbsp;// GEMINI + GROQ + OPENROUTER &nbsp;// ГЕНЕРАТОР ТЕМ КВАЛІФІКАЦІЙНИХ РОБІТ &nbsp;// MULTI-PROVIDER FALLBACK &nbsp;// THESIS_GEN v1.0 &nbsp;// СИСТЕМА ОНЛАЙН &nbsp;// 3 AI АГЕНТИ АКТИВНІ &nbsp;// GEMINI + GROQ + OPENROUTER &nbsp;//
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;border:2px solid #000;border-bottom:none;margin-top:1.5rem;">
+    <div style="border-right:1px solid #000;padding:5px 12px;font-size:0.65rem;background:#000;color:#fff;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;">SYS.REF</div>
+    <div style="border-right:1px solid #000;padding:5px 12px;font-size:0.65rem;background:#000;color:#fff;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;">МОДУЛЬ</div>
+    <div style="border-right:1px solid #000;padding:5px 12px;font-size:0.65rem;background:#000;color:#fff;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;">СТАТУС</div>
+    <div style="padding:5px 12px;font-size:0.65rem;background:#000;color:#fff;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;">ДІЯ</div>
+</div>
+
+<div style="border:2px solid #000;border-top:none;margin-bottom:2rem;">
+
+    <a href="{% if user.is_authenticated %}{% url 'topics:generate' %}{% else %}{% url 'topics:trial' %}{% endif %}" class="home-row" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;border-bottom:1px solid #000;text-decoration:none;color:#000;">
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;font-weight:700;">MOD.01</div>
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.9rem;font-weight:700;">ГЕНЕРАЦІЯ ТЕМ</div>
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;"><span style="font-size:0.55rem;">■</span> ACTIVE</div>
+        <div class="home-cell" style="padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;font-weight:700;">ЗАПУСТИТИ →</div>
+    </a>
+
+    <a href="{% url 'topics:quiz' %}" class="home-row" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;border-bottom:1px solid #000;text-decoration:none;color:#000;">
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;font-weight:700;">MOD.02</div>
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.9rem;font-weight:700;">ТЕСТ / ПРОФАЙЛЕР</div>
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;"><span style="font-size:0.55rem;">■</span> ACTIVE</div>
+        <div class="home-cell" style="padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;font-weight:700;">ВІДКРИТИ →</div>
+    </a>
+
+    <a href="{% url 'topics:topic_audit' %}" class="home-row" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;border-bottom:1px solid #000;text-decoration:none;color:#000;">
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;font-weight:700;">MOD.03</div>
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.9rem;font-weight:700;">АУДИТ ТЕМИ</div>
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;"><span style="font-size:0.55rem;">■</span> ACTIVE</div>
+        <div class="home-cell" style="padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;font-weight:700;">ПЕРЕВІРИТИ →</div>
+    </a>
+
+    <a href="{% url 'topics:history' %}" class="home-row" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;text-decoration:none;color:#000;">
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.72rem;font-weight:700;">MOD.04</div>
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.9rem;font-weight:700;">АРХІВ СЕСІЙ</div>
+        <div class="home-cell" style="border-right:1px solid #000;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;"><span style="font-size:0.55rem;">■</span> ACTIVE</div>
+        <div class="home-cell" style="padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;font-weight:700;">АРХІВ →</div>
+    </a>
+
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid #000;margin-bottom:2rem;">
+
+    <div style="border-right:1px solid #000;">
+        <div style="background:#000;color:#fff;padding:6px 14px;font-family:'JetBrains Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;font-weight:700;">SYS.01 // ЩО ЦЕ ТАКЕ?</div>
+        <div style="padding:1.25rem 1.5rem;font-family:'JetBrains Mono',monospace;font-size:0.78rem;line-height:1.75;border-bottom:1px solid #000;">
+            <div style="font-weight:700;font-size:0.95rem;margin-bottom:0.75rem;">THESIS_GEN — платформа для генерації тем дипломних робіт за допомогою ШІ-дебатів.</div>
+            <div style="margin-bottom:0.5rem;">&gt; Три автономні агенти — GENERATOR, CRITIC, JUDGE — ведуть структурований дебат.</div>
+            <div style="margin-bottom:0.5rem;">&gt; Кожне коло: генерація гіпотез → критика → оцінка від 1 до 10.</div>
+            <div style="margin-bottom:0.5rem;">&gt; Ти можеш втрутитись під час дебату, дати фідбек, або лайкнути теми.</div>
+            <div>&gt; На виході — ранжований список тем з коментарями та аудитом.</div>
+        </div>
+        <div style="padding:1rem 1.5rem;font-family:'JetBrains Mono',monospace;font-size:0.72rem;line-height:1.6;">
+            <div style="font-weight:700;margin-bottom:0.4rem;">АЛГОРИТМ РОБОТИ:</div>
+            <div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.3rem;"><span style="background:#000;color:#fff;padding:1px 6px;font-size:0.65rem;flex-shrink:0;">01</span><span>Заповни профіль (спеціальність, рівень, інтереси)</span></div>
+            <div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.3rem;"><span style="background:#000;color:#fff;padding:1px 6px;font-size:0.65rem;flex-shrink:0;">02</span><span>Запусти коло дебату — агенти пропонують і критикують теми</span></div>
+            <div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.3rem;"><span style="background:#000;color:#fff;padding:1px 6px;font-size:0.65rem;flex-shrink:0;">03</span><span>Дай власний фідбек або запусти наступне коло</span></div>
+            <div style="display:flex;align-items:flex-start;gap:0.5rem;"><span style="background:#000;color:#fff;padding:1px 6px;font-size:0.65rem;flex-shrink:0;">04</span><span>Отримай фінальний рейтинг і зроби аудит вибраної теми</span></div>
+        </div>
+    </div>
+
     <div>
-        <span class="tech-index position-static d-inline-block mb-1">NAV.CORE // ACTION_GRID</span>
-        <h2 class="display-5 fw-bold mb-0" style="letter-spacing: -1px;">МОДУЛІ СИСТЕМИ</h2>
+        <div style="background:#000;color:#fff;padding:6px 14px;font-family:'JetBrains Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;font-weight:700;">SYS.02 // AI_ENGINES + СТАТУС</div>
+        <div style="padding:1.25rem 1.5rem;border-bottom:1px solid #000;">
+            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:0.4rem 1rem;align-items:center;font-family:'JetBrains Mono',monospace;font-size:0.78rem;">
+                <span style="font-size:0.5rem;font-weight:900;">■</span>
+                <span style="font-weight:700;">GENERATOR_AI</span>
+                <span style="font-size:0.7rem;text-align:right;font-weight:700;">{{ ai_models.gemini|default:"gemini-2.5-flash" }}</span>
+                <span style="border-bottom:1px solid #000;grid-column:1/-1;"></span>
+                <span style="font-size:0.5rem;font-weight:900;">■</span>
+                <span style="font-weight:700;">CRITIC_AI</span>
+                <span style="font-size:0.7rem;text-align:right;font-weight:700;">{{ ai_models.groq|default:"llama-3.3-70b-versatile" }}</span>
+                <span style="border-bottom:1px solid #000;grid-column:1/-1;"></span>
+                <span style="font-size:0.5rem;font-weight:900;">■</span>
+                <span style="font-weight:700;">JUDGE_AI</span>
+                <span style="font-size:0.7rem;text-align:right;font-weight:700;">{{ ai_models.openrouter|default:"llama-3.3-70b-instruct:free" }}</span>
+            </div>
+        </div>
+        <div style="padding:1.25rem 1.5rem;font-family:'JetBrains Mono',monospace;font-size:0.78rem;line-height:2;">
+            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #000;padding-bottom:4px;margin-bottom:4px;"><span>SYSTEM_STATUS</span><span style="font-weight:700;">ONLINE</span></div>
+            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #000;padding-bottom:4px;margin-bottom:4px;"><span>AGENTS_LOADED</span><span style="font-weight:700;">3 / 3</span></div>
+            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #000;padding-bottom:4px;margin-bottom:4px;"><span>FALLBACK_CHAIN</span><span style="font-weight:700;">ACTIVE</span></div>
+            <div style="display:flex;justify-content:space-between;">
+                <span>SESSION</span>
+                <span style="font-weight:700;">{% if user.is_authenticated %}{% if user.is_staff %}{{ user.username }} [ADMIN]{% else %}{{ user.username }}{% endif %}{% else %}GUEST{% endif %}</span>
+            </div>
+        </div>
     </div>
-    <div class="small font-monospace text-muted d-none d-md-block">
-        [ НАТИСНІТЬ НА БЛОК ДЛЯ ПЕРЕХОДУ ]
-    </div>
+
 </div>
 
-<div class="row g-4 mb-4">
-    <div class="col-md-6 col-lg-3">
-        <a href="{% url 'topics:quiz' %}" class="card-brutal text-decoration-none text-reset h-100 d-flex flex-column justify-content-between p-4 d-block">
-            <div>
-                <span class="tech-index">MOD.01 // PROFILER</span>
-                <div class="fs-1 fw-bold mb-2 font-monospace" style="font-family: 'Syne';">01.</div>
-                <h4 class="fw-bold mb-2 font-monospace">ТЕСТ ІНТЕРЕСІВ</h4>
-                <div class="separator mb-3"></div>
-                <p class="small text-muted mb-4 font-monospace">
-                    Пройдіть інтерактивне опитування, щоб визначити ваші наукові уподобання та отримати персоналізовані теми.
-                </p>
-            </div>
-            <div class="mt-auto pt-2 border-top border-dark d-flex justify-content-between align-items-center font-monospace small fw-bold">
-                <span>ПРОЙТИ ТЕСТ</span>
-                <span>→</span>
-            </div>
-        </a>
-    </div>
+<a href="{% url 'topics:api_keys' %}" style="display:block;text-decoration:none;color:#fff;background:#000;border:2px solid #000;padding:1.25rem 1.5rem;font-family:'JetBrains Mono',monospace;margin-bottom:2rem;transition:background 0.12s,color 0.12s;" onmouseover="this.style.background='#fff';this.style.color='#000'" onmouseout="this.style.background='#000';this.style.color='#fff'">
+    <div style="font-size:0.65rem;letter-spacing:0.1em;margin-bottom:6px;opacity:0.6;">CFG.01 // BYOK_SYSTEM</div>
+    <div style="font-size:1rem;font-weight:700;margin-bottom:4px;">[ BYOK ] — ПІДКЛЮЧИ ВЛАСНИЙ API-КЛЮЧ → НЕОБМЕЖЕНИЙ ДОСТУП</div>
+    <div style="font-size:0.75rem;opacity:0.75;">Gemini / Groq / OpenRouter — додай свій ключ і забудь про ліміти.</div>
+</a>
 
-    <div class="col-md-6 col-lg-3">
-        <a href="{% if user.is_authenticated %}{% url 'topics:generate' %}{% else %}{% url 'topics:trial' %}{% endif %}" 
-           class="card-brutal text-decoration-none text-reset h-100 d-flex flex-column justify-content-between p-4 d-block">
-            <div>
-                <span class="tech-index">MOD.02 // DEBATE</span>
-                <div class="fs-1 fw-bold mb-2 font-monospace" style="font-family: 'Syne';">02.</div>
-                <h4 class="fw-bold mb-2 font-monospace">ДЕБАТИ ШІ</h4>
-                <div class="separator mb-3"></div>
-                <p class="small text-muted mb-4 font-monospace">
-                    Запустіть повний цикл генерації: створення варіантів, жорстка критика та оцінювання незалежним Суддею.
-                </p>
-            </div>
-            <div class="mt-auto pt-2 border-top border-dark d-flex justify-content-between align-items-center font-monospace small fw-bold">
-                <span>НОВА ГЕНЕРАЦІЯ</span>
-                <span>→</span>
-            </div>
-        </a>
-    </div>
+{% endblock %}
 
-    <div class="col-md-6 col-lg-3">
-        <a href="{% url 'topics:topic_audit' %}" class="card-brutal text-decoration-none text-reset h-100 d-flex flex-column justify-content-between p-4 d-block">
-            <div>
-                <span class="tech-index">MOD.03 // AUDIT</span>
-                <div class="fs-1 fw-bold mb-2 font-monospace" style="font-family: 'Syne';">03.</div>
-                <h4 class="fw-bold mb-2 font-monospace">АУДИТ ТЕМИ</h4>
-                <div class="separator mb-3"></div>
-                <p class="small text-muted mb-4 font-monospace">
-                    Маєте власну тему? Отримайте миттєву експертну рецензію комісії, аналіз підводних каменів та 3 кращих формулювання.
-                </p>
-            </div>
-            <div class="mt-auto pt-2 border-top border-dark d-flex justify-content-between align-items-center font-monospace small fw-bold">
-                <span>ПРОВЕСТИ АУДИТ</span>
-                <span>→</span>
-            </div>
-        </a>
-    </div>
+{% block scripts %}
+<style>
+@keyframes cur-blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+@keyframes marquee-scroll { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+.home-row:hover .home-cell { background:#000 !important;color:#fff !important; }
+.home-row:hover .home-cell span { color:#fff !important; }
+</style>
+<script>
+(function () {
+    var BOOT_LINES = [
+        { text: 'THESIS_GEN OS v1.0.0', delay: 0 },
+        { text: '──────────────────────────────────────────', delay: 60 },
+        { text: 'BIOS: Initializing hardware...', delay: 60 },
+        { text: 'CPU: Academic AI Engine — LOADED', delay: 220 },
+        { text: 'RAM: Context buffer — OK', delay: 180 },
+        { text: '──────────────────────────────────────────', delay: 80 },
+        { text: 'Loading GENERATOR_AI (Gemini)............OK', delay: 320 },
+        { text: 'Loading CRITIC_AI   (Groq).................OK', delay: 300 },
+        { text: 'Loading JUDGE_AI    (OpenRouter)...........OK', delay: 310 },
+        { text: '──────────────────────────────────────────', delay: 80 },
+        { text: 'FALLBACK CHAIN: Gemini → Groq → OpenRouter', delay: 220 },
+        { text: 'MULTI-AGENT DEBATE: ENABLED', delay: 180 },
+        { text: 'КВОТА: {% if user.is_authenticated %}{% if user.is_staff %}UNLIMITED (ADMIN){% else %}REGISTERED USER{% endif %}{% else %}GUEST (1 FREE){% endif %}', delay: 200 },
+        { text: '──────────────────────────────────────────', delay: 80 },
+        { text: 'SYS STATUS: ALL SYSTEMS OPERATIONAL', delay: 280 },
+        { text: '> READY. Натисніть будь-яку клавішу або зачекайте...', delay: 320 },
+    ];
 
-    <div class="col-md-6 col-lg-3">
-        <a href="{% url 'topics:history' %}" class="card-brutal text-decoration-none text-reset h-100 d-flex flex-column justify-content-between p-4 d-block">
-            <div>
-                <span class="tech-index">MOD.04 // ARCHIVE</span>
-                <div class="fs-1 fw-bold mb-2 font-monospace" style="font-family: 'Syne';">04.</div>
-                <h4 class="fw-bold mb-2 font-monospace">МОЯ ІСТОРІЯ</h4>
-                <div class="separator mb-3"></div>
-                <p class="small text-muted mb-4 font-monospace">
-                    Архів усіх ваших генерацій, обраних та лайкнутих тем, з можливістю надіслати підбірку на Email.
-                </p>
-            </div>
-            <div class="mt-auto pt-2 border-top border-dark d-flex justify-content-between align-items-center font-monospace small fw-bold">
-                <span>ВІДКРИТИ ІСТОРІЮ</span>
-                <span>→</span>
-            </div>
-        </a>
-    </div>
-</div>
+    var SKIP_KEY = 'tg_boot_seen';
+    var COOKIE_KEY = 'tg_cookie_ok';
+    var bootEl = document.getElementById('boot-screen');
+    var outputEl = document.getElementById('boot-output');
 
-<div class="row g-4 mt-1">
-    <div class="col-12">
-        <a href="{% url 'topics:api_keys' %}" class="card-brutal text-decoration-none text-reset p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 d-block">
-            <div>
-                <span class="tech-index">CFG.01 // BYOK_SYSTEM</span>
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <span class="badge-brutal badge-brutal-black font-monospace small">[ BYOK ]</span>
-                    <h4 class="mb-0 fw-bold font-monospace">ПІДКЛЮЧЕННЯ ВЛАСНИХ КЛЮЧІВ</h4>
-                </div>
-                <p class="small text-muted mb-0 font-monospace" style="max-width: 800px;">
-                    Додайте власний API-ключ Gemini, Groq або OpenRouter: отримайте підвищений денний ліміт (до 50 сесій на день) та 100% захист від вичерпання загальних квот.
-                </p>
-            </div>
-            <div class="text-nowrap">
-                <span class="btn-brutal btn-brutal-white font-monospace small py-2 px-3">
-                    НАЛАШТУВАТИ КЛЮЧІ ↗
-                </span>
-            </div>
-        </a>
-    </div>
-</div>
+    function showCookieBanner() {
+        if (localStorage.getItem(COOKIE_KEY)) return;
+        var b = document.getElementById('cookie-banner');
+        if (b) b.style.display = 'flex';
+    }
+
+    window.acceptCookies = function () {
+        localStorage.setItem(COOKIE_KEY, '1');
+        var b = document.getElementById('cookie-banner');
+        if (b) b.style.display = 'none';
+    };
+
+    window.declineCookies = function () {
+        var b = document.getElementById('cookie-banner');
+        if (b) b.style.display = 'none';
+    };
+
+    function hideBoot() {
+        bootEl.style.transition = 'opacity 0.5s ease';
+        bootEl.style.opacity = '0';
+        setTimeout(function () {
+            bootEl.style.display = 'none';
+            showCookieBanner();
+        }, 520);
+        document.removeEventListener('keydown', skipOnKey);
+    }
+
+    window.skipBoot = function () {
+        localStorage.setItem(SKIP_KEY, '1');
+        hideBoot();
+    };
+
+    function skipOnKey() { window.skipBoot(); }
+
+    function runBoot() {
+        document.addEventListener('keydown', skipOnKey);
+        var i = 0;
+        var accDelay = 0;
+        function nextLine() {
+            if (i >= BOOT_LINES.length) {
+                setTimeout(function () {
+                    localStorage.setItem(SKIP_KEY, '1');
+                    hideBoot();
+                }, 1200);
+                return;
+            }
+            var item = BOOT_LINES[i++];
+            accDelay += item.delay;
+            setTimeout(function () {
+                var line = document.createElement('div');
+                line.textContent = '> ' + item.text;
+                outputEl.appendChild(line);
+                outputEl.scrollTop = outputEl.scrollHeight;
+                nextLine();
+            }, accDelay);
+        }
+        nextLine();
+    }
+
+    if (localStorage.getItem(SKIP_KEY)) {
+        bootEl.style.display = 'none';
+        showCookieBanner();
+    } else {
+        runBoot();
+    }
+})();
+</script>
 {% endblock %}

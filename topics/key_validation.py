@@ -23,7 +23,6 @@ def validate_provider_key(provider: str, api_key: str) -> tuple[bool, str]:
 
     try:
         if provider == 'gemini':
-            # Найшвидший і безкоштовний виклик: список доступних моделей
             url = f"https://generativelanguage.googleapis.com/v1beta/models?key={key}"
             resp = requests.get(url, timeout=timeout)
             if resp.status_code == 200:

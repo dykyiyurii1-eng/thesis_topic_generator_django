@@ -28,7 +28,6 @@ def _get_fernet_instance() -> MultiFernet:
                     logger.warning("[CRYPTO] Некоректний ключ у FERNET_KEYS: %s", e)
 
     if not keys:
-        # Fallback на основі Django SECRET_KEY: створюємо валідний 32-байтний base64 url-safe ключ
         secret = getattr(settings, 'SECRET_KEY', 'default-thesis-gen-secret-key-12345')
         digest = hashlib.sha256(secret.encode('utf-8')).digest()
         urlsafe_key = base64.urlsafe_b64encode(digest)

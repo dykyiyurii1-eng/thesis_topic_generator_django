@@ -5,72 +5,86 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Генератор тем{% endblock %}</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-    
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="{% static 'css/brytal_style.css' %}">
 </head>
 <body class="d-flex flex-column min-vh-100">
-    <nav class="navbar navbar-expand-lg border-bottom border-dark bg-white px-3 py-2 sticky-top">
-        <div class="container-fluid">
-            <a class="brand-logo navbar-brand fs-3 mb-0" href="{% url 'topics:home' %}">THESIS_GEN *</a>
-            
-            <button class="navbar-toggler rounded-0 border-dark" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+
+    <div id="progress-bar-wrap" style="position:fixed;top:0;left:0;width:100%;height:3px;z-index:10000;pointer-events:none;">
+        <div id="progress-bar" style="height:3px;width:0%;background:#000;transition:width 0.3s ease;"></div>
+    </div>
+
+    <nav class="navbar navbar-expand-lg border-bottom border-dark bg-white px-2 py-1 sticky-top">
+        <div class="container-fluid gap-2">
+            <a class="brand-logo navbar-brand mb-0" href="{% url 'topics:home' %}" style="font-size:1rem;letter-spacing:0.04em;">THESIS_GEN *</a>
+
+            <button class="navbar-toggler rounded-0 border-dark p-1" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
-            <div class="collapse navbar-collapse justify-content-end" id="mainNav">
-                <div class="navbar-nav align-items-center gap-2 mt-3 mt-lg-0">
-                    <a class="nav-link font-monospace fw-bold text-dark text-nowrap" href="{% url 'topics:home' %}">[ 01_Головна ]</a>
-                    <a class="nav-link font-monospace fw-bold text-dark text-nowrap" href="{% url 'topics:quiz' %}">[ 02_Тест ]</a>
-                    <a class="nav-link font-monospace fw-bold text-dark text-nowrap" href="{% url 'topics:topic_audit' %}">[ 03_Аудит теми ]</a>
-                    <a class="nav-link font-monospace fw-bold text-dark text-nowrap" href="{% url 'topics:history' %}">[ 04_Історія ]</a>
 
-                    <a href="{% if user.is_authenticated %}{% url 'topics:generate' %}{% else %}{% url 'topics:trial' %}{% endif %}" 
-                       class="btn-brutal btn-brutal-black py-1 px-3 text-nowrap font-monospace small mx-lg-1">
+            <div class="collapse navbar-collapse justify-content-end" id="mainNav">
+                <div class="navbar-nav align-items-center gap-1 mt-2 mt-lg-0">
+
+                    <a class="nav-link nav-compact text-nowrap" href="{% url 'topics:home' %}">[ Головна ]</a>
+
+                    <div class="nav-item dropdown">
+                        <a class="nav-link nav-compact dropdown-toggle text-nowrap" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            [ Інструменти ]
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end rounded-0 border-dark shadow-none font-monospace" style="font-size:0.75rem;min-width:180px;">
+                            <li><a class="dropdown-item py-1" href="{% url 'topics:quiz' %}">02 // Тест</a></li>
+                            <li><a class="dropdown-item py-1" href="{% url 'topics:topic_audit' %}">03 // Аудит теми</a></li>
+                            <li><a class="dropdown-item py-1" href="{% url 'topics:history' %}">04 // Історія</a></li>
+                        </ul>
+                    </div>
+
+                    <a href="{% if user.is_authenticated %}{% url 'topics:generate' %}{% else %}{% url 'topics:trial' %}{% endif %}"
+                       class="btn-brutal btn-brutal-black py-1 px-2 text-nowrap font-monospace ms-1" style="font-size:0.72rem;">
                         + ГЕНЕРАЦІЯ
                     </a>
-                    
+
                     {% if user.is_authenticated %}
                         {% if user.is_staff %}
                             <div class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle font-monospace fw-bold text-danger text-nowrap" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    [ ⚙ АДМІНКА ]
+                                <a class="nav-link nav-compact dropdown-toggle text-nowrap text-danger" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    [ ⚙ Адмін ]
                                 </a>
-                                <ul class="dropdown-menu dropdown-menu-end rounded-0 border-dark shadow-none font-monospace small">
-                                    <li><a class="dropdown-item py-2" href="{% url 'topics:admin_activity' %}">АКТИВНІСТЬ КОРИСТУВАЧІВ</a></li>
-                                    <li><a class="dropdown-item py-2" href="{% url 'topics:sandbox' %}">ПІСОЧНИЦЯ ПРОМПТІВ</a></li>
+                                <ul class="dropdown-menu dropdown-menu-end rounded-0 border-dark shadow-none font-monospace" style="font-size:0.75rem;min-width:200px;">
+                                    <li><a class="dropdown-item py-1" href="{% url 'topics:admin_activity' %}">Активність користувачів</a></li>
+                                    <li><a class="dropdown-item py-1" href="{% url 'topics:sandbox' %}">Пісочниця промптів</a></li>
                                     <li><hr class="dropdown-divider border-dark my-1"></li>
-                                    <li><a class="dropdown-item py-2 text-danger" href="/admin/" target="_blank">DJANGO АДМІНКА ↗</a></li>
+                                    <li><a class="dropdown-item py-1 text-danger" href="/admin/" target="_blank">Django Адмінка ↗</a></li>
                                 </ul>
                             </div>
                         {% endif %}
 
                         <div class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle font-monospace fw-bold text-dark text-nowrap" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="nav-link nav-compact dropdown-toggle text-nowrap" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 [ 👤 {{ user.username }} ]
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end rounded-0 border-dark shadow-none font-monospace small">
-                                <li><a class="dropdown-item py-2" href="{% url 'topics:api_keys' %}">ВЛАСНІ API-КЛЮЧІ</a></li>
-                                <li><a class="dropdown-item py-2" href="{% url 'topics:history' %}">МОЇ СЕСІЇ</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end rounded-0 border-dark shadow-none font-monospace" style="font-size:0.75rem;min-width:180px;">
+                                <li><a class="dropdown-item py-1" href="{% url 'topics:api_keys' %}">Власні API-ключі</a></li>
+                                <li><a class="dropdown-item py-1" href="{% url 'topics:history' %}">Мої сесії</a></li>
                                 <li><hr class="dropdown-divider border-dark my-1"></li>
                                 <li>
                                     <form action="{% url 'accounts:logout' %}" method="post" class="m-0 p-0">
                                         {% csrf_token %}
-                                        <button type="submit" class="dropdown-item py-2 text-danger font-monospace border-0 bg-transparent w-100 text-start">ВИЙТИ</button>
+                                        <button type="submit" class="dropdown-item py-1 text-danger font-monospace border-0 bg-transparent w-100 text-start">Вийти</button>
                                     </form>
                                 </li>
                             </ul>
                         </div>
                     {% else %}
-                        <a class="nav-link font-monospace fw-bold text-dark text-nowrap" href="{% url 'accounts:login' %}">[ УВІЙТИ ]</a>
+                        <a class="nav-link nav-compact text-nowrap" href="{% url 'accounts:login' %}">[ Увійти ]</a>
                     {% endif %}
-                    
-                    <button id="theme-toggle" class="btn btn-link nav-link font-monospace fw-bold text-dark p-0 text-nowrap ms-1" title="Змінити тему">[ ● ]</button>
+
+                    <button id="theme-toggle" class="btn btn-link nav-link nav-compact p-0 text-nowrap ms-1" title="Змінити тему">[ ◎ ]</button>
                 </div>
             </div>
         </div>
@@ -104,29 +118,59 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'js/animations.js' %}" defer></script>
-    
+
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const toggle = document.querySelector('#theme-toggle');
-        const html = document.documentElement;
-        
-        if (localStorage.getItem('theme') === 'dark') {
-            html.classList.add('invert');
-        }
-        
-        if (toggle) {
-            toggle.addEventListener('click', function() {
-                html.classList.toggle('invert');
-                if (html.classList.contains('invert')) {
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    localStorage.setItem('theme', 'light');
+    (function() {
+        var bar = document.getElementById('progress-bar');
+        var timer = null;
+        var fake = 0;
+
+        window.startProgress = function() {
+            fake = 0;
+            bar.style.width = '0%';
+            clearInterval(timer);
+            timer = setInterval(function() {
+                if (fake < 85) {
+                    fake += (85 - fake) * 0.08;
+                    bar.style.width = fake + '%';
                 }
+            }, 200);
+        };
+
+        window.finishProgress = function() {
+            clearInterval(timer);
+            bar.style.transition = 'width 0.2s ease';
+            bar.style.width = '100%';
+            setTimeout(function() {
+                bar.style.transition = 'width 0.6s ease';
+                bar.style.width = '0%';
+            }, 400);
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('form').forEach(function(form) {
+                form.addEventListener('submit', function() {
+                    startProgress();
+                });
             });
-        }
-    });
+
+            var toggle = document.querySelector('#theme-toggle');
+            var html = document.documentElement;
+
+            if (localStorage.getItem('theme') === 'dark') {
+                html.classList.add('invert');
+            }
+
+            if (toggle) {
+                toggle.addEventListener('click', function() {
+                    html.classList.toggle('invert');
+                    localStorage.setItem('theme', html.classList.contains('invert') ? 'dark' : 'light');
+                });
+            }
+        });
+    })();
     </script>
-    
+
     {% block scripts %}{% endblock %}
 </body>
 </html>

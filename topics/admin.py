@@ -65,7 +65,7 @@ class UserApiKeyAdmin(admin.ModelAdmin):
     list_filter = ('provider', 'is_valid')
     search_fields = ('user__username',)
     readonly_fields = ('masked_key_display', 'created_at', 'last_used_at')
-    exclude = ('encrypted_key',)  # Повний ключ ніколи не показується в адмінці
+    exclude = ('encrypted_key',)
 
     def masked_key_display(self, obj):
         return obj.masked_key

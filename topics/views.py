@@ -420,15 +420,19 @@ class SessionCreateView(LoginRequiredMixin, CreateView):
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated and not request.user.is_staff:
-            since = timezone.now() - timedelta(days=1)
-            used = GenerationSession.objects.filter(
-                student=request.user, created_at__gte=since).count()
             from .models import UserApiKey
             has_own_key = UserApiKey.objects.filter(user=request.user, is_valid=True).exists()
-            limit = 50 if has_own_key else 10
-            if used >= limit:
-                messages.error(request, 'Ліміт генерацій на сьогодні вичерпано.')
-                return redirect('topics:history')
+            if not has_own_key:
+                since = timezone.now() - timedelta(days=1)
+                used = GenerationSession.objects.filter(
+                    student=request.user, created_at__gte=since).count()
+                if used >= 2:
+                    messages.error(
+                        request,
+                        'Ви використали 2 безкоштовні генерації. '
+                        'Додайте власний API-ключ для необмеженого доступу.'
+                    )
+                    return redirect('topics:api_keys')
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
@@ -691,6 +695,27 @@ def topic_audit_view(request):
         form_data['title'] = request.POST.get('title', '').strip()
         form_data['description'] = request.POST.get('description', '').strip()
 
+        if not request.user.is_authenticated:
+            audit_key = 'guest_audit_used'
+            if request.session.get(audit_key):
+                error_message = 'Пробний аудит вже використано. Зареєструйтесь для продовження.'
+                return render(request, 'topics/audit.html', {
+                    'form_data': form_data, 'audit_result': None, 'error_message': error_message,
+                })
+        elif not request.user.is_staff:
+            from .models import UserApiKey
+            has_own_key = UserApiKey.objects.filter(user=request.user, is_valid=True).exists()
+            if not has_own_key:
+                audit_count = request.session.get('audit_count', 0)
+                if audit_count >= 2:
+                    error_message = (
+                        'Ви використали 2 безкоштовні аудити. '
+                        'Додайте власний API-ключ для необмеженого доступу.'
+                    )
+                    return render(request, 'topics/audit.html', {
+                        'form_data': form_data, 'audit_result': None, 'error_message': error_message,
+                    })
+
         if not form_data['specialty'] or not form_data['title']:
             error_message = "Будь ласка, вкажіть спеціальність та назву теми."
         else:
@@ -706,6 +731,13 @@ def topic_audit_view(request):
                 audit_result = parse_json_response(raw)
                 if isinstance(audit_result, dict):
                     audit_result['provider'] = provider
+                    if not request.user.is_authenticated:
+                        request.session['guest_audit_used'] = True
+                    elif not request.user.is_staff:
+                        from .models import UserApiKey
+                        has_own_key = UserApiKey.objects.filter(user=request.user, is_valid=True).exists()
+                        if not has_own_key:
+                            request.session['audit_count'] = request.session.get('audit_count', 0) + 1
                 else:
                     audit_result = None
                     error_message = "ШІ повернув неочікувану структуру аудиту. Спробуйте ще раз."

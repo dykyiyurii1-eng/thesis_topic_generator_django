@@ -279,6 +279,7 @@
             return;
         }
         btn.disabled = true;
+        window._progressDone = false; if (window.startProgress) startProgress();
         Object.keys(WINDOWS).forEach(function (id) {
             setStep(id.replace('window-', ''), 'ОЧІКУВАННЯ');
         });
@@ -296,6 +297,7 @@
                 source.close();
                 source = null;
             }
+            if (window.finishProgress) finishProgress();
             let rawText = '';
             if (typeof errPayload === 'string') {
                 rawText = errPayload;
@@ -350,12 +352,14 @@
             } else if (d.type === 'status') {
                 statusText.textContent = d.text;
             } else if (d.type === 'agent') {
+                if (window._progressDone !== true && window.finishProgress) { window._progressDone = true; finishProgress(); }
+                if (window.finishProgress) { finishProgress(); window.finishProgress = null; }
                 addMessage(d.agent, d.text);
                 setStep(d.agent, 'ГОТОВО (' + d.provider + ')');
             } else if (d.type === 'round_done') {
                 source.close();
                 source = null;
-                d.topics.forEach(function (t) { t.round = d.round; renderTopic(t); });
+                                d.topics.forEach(function (t) { t.round = d.round; renderTopic(t); });
                 showPanel();
                 finishRound(d.round);
             }
